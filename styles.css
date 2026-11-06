@@ -1244,6 +1244,12 @@ a.btn:focus-visible {
 .win-note { min-height: 17px; margin: 0 0 16px; font-size: 11.5px; color: var(--muted); }
 .win-actions { justify-content: center; }
 .win-actions .btn.primary { margin-left: 0; }
+/* 恭喜卡片只能由这个确认按钮关闭 按钮保留轻微按压缩放反馈 */
+.win-confirm { min-height: 40px; padding: 9px 16px; }
+.win-confirm .ico { width: 15px; height: 15px; }
+@media (max-width: 520px) {
+  .win-confirm { order: 1; flex: 1 1 100%; }
+}
 
 .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .confetti i {

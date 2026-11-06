@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'calendar-puzzle-v10';
+const CACHE = 'calendar-puzzle-v11';
 const ASSETS = [
   './',
   './index.html',

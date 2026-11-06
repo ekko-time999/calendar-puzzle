@@ -252,6 +252,10 @@
 
     buildConfetti();
     openModal($('winModal'));
+    // 恭喜卡片不自动关闭 焦点直接落在确认按钮上 回车即可关闭
+    setTimeout(function () {
+      $('winConfirm').focus({ preventScroll: true });
+    }, 60);
   }
 
   function buildConfetti() {
@@ -444,6 +448,9 @@
       closeModal($('winModal'));
       openStats();
     });
+    $('winConfirm').addEventListener('click', function () {
+      closeModal($('winModal'));
+    });
 
     var closeButtons = document.querySelectorAll('[data-close]');
     for (var i = 0; i < closeButtons.length; i++) {
@@ -456,7 +463,10 @@
     var modals = document.querySelectorAll('.modal');
     for (var j = 0; j < modals.length; j++) {
       modals[j].addEventListener('click', function (e) {
-        if (e.target === e.currentTarget) closeModal(e.currentTarget);
+        if (e.target !== e.currentTarget) return;
+        // 恭喜卡片保持停留 误触背景不关闭 必须点击确认按钮
+        if (e.currentTarget.id === 'winModal') return;
+        closeModal(e.currentTarget);
       });
     }
 
@@ -472,7 +482,8 @@
     document.addEventListener('keydown', function (e) {
       var open = document.querySelector('.modal.open');
       if (e.key === 'Escape') {
-        if (open) closeModal(open);
+        // 恭喜卡片需主动点击确认 不响应 Esc
+        if (open && open.id !== 'winModal') closeModal(open);
         return;
       }
       if (open) return;

@@ -1254,6 +1254,12 @@ a.btn:focus-visible {
 .win-note { min-height: 17px; margin: 0 0 16px; font-size: 11.5px; color: var(--muted); }
 .win-actions { justify-content: center; }
 .win-actions .btn.primary { margin-left: 0; }
+/* 恭喜卡片只能由这个确认按钮关闭 按钮保留轻微按压缩放反馈 */
+.win-confirm { min-height: 40px; padding: 9px 16px; }
+.win-confirm .ico { width: 15px; height: 15px; }
+@media (max-width: 520px) {
+  .win-confirm { order: 1; flex: 1 1 100%; }
+}
 
 .confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
 .confetti i {
@@ -1844,9 +1850,12 @@ a.btn:focus-visible {
       </div>
       <p id="winNote" class="win-note"></p>
       <div class="modal-actions win-actions">
-        <button id="winReplay" class="btn primary" type="button">再来一局</button>
+        <button id="winReplay" class="btn subtle" type="button">再来一局</button>
         <button id="winDate" class="btn subtle" type="button">换个日期</button>
         <button id="winStats" class="btn subtle" type="button">看统计</button>
+        <button id="winConfirm" class="btn primary win-confirm" type="button">
+          <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>确认
+        </button>
       </div>
     </div>
   </div>
@@ -4376,6 +4385,10 @@ a.btn:focus-visible {
 
     buildConfetti();
     openModal($('winModal'));
+    // 恭喜卡片不自动关闭 焦点直接落在确认按钮上 回车即可关闭
+    setTimeout(function () {
+      $('winConfirm').focus({ preventScroll: true });
+    }, 60);
   }
 
   function buildConfetti() {
@@ -4568,6 +4581,9 @@ a.btn:focus-visible {
       closeModal($('winModal'));
       openStats();
     });
+    $('winConfirm').addEventListener('click', function () {
+      closeModal($('winModal'));
+    });
 
     var closeButtons = document.querySelectorAll('[data-close]');
     for (var i = 0; i < closeButtons.length; i++) {
@@ -4580,7 +4596,10 @@ a.btn:focus-visible {
     var modals = document.querySelectorAll('.modal');
     for (var j = 0; j < modals.length; j++) {
       modals[j].addEventListener('click', function (e) {
-        if (e.target === e.currentTarget) closeModal(e.currentTarget);
+        if (e.target !== e.currentTarget) return;
+        // 恭喜卡片保持停留 误触背景不关闭 必须点击确认按钮
+        if (e.currentTarget.id === 'winModal') return;
+        closeModal(e.currentTarget);
       });
     }
 
@@ -4596,7 +4615,8 @@ a.btn:focus-visible {
     document.addEventListener('keydown', function (e) {
       var open = document.querySelector('.modal.open');
       if (e.key === 'Escape') {
-        if (open) closeModal(open);
+        // 恭喜卡片需主动点击确认 不响应 Esc
+        if (open && open.id !== 'winModal') closeModal(open);
         return;
       }
       if (open) return;
