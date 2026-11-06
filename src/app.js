@@ -290,14 +290,20 @@
       var prompt = deferredPrompt;
       if (!prompt) return;
       deferredPrompt = null;
-      prompt.prompt();
+      hideTip(true);
+      try {
+        prompt.prompt();
+      } catch (e) {
+        if (game) game.toast('安装失败 可以从浏览器菜单手动添加');
+        openHelp();
+        return;
+      }
       var choice = prompt.userChoice;
       if (!choice || !choice.then) return;
       choice.then(function (result) {
-        btn.hidden = true;
-        hideTip(true);
-        if (result && result.outcome === 'accepted' && game) {
-          game.toast('安装完成 之后离线也能打开');
+        if (result && result.outcome === 'accepted') {
+          btn.hidden = true;
+          if (game) game.toast('安装完成 之后离线也能打开');
         }
       });
     }
