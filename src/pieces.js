@@ -53,6 +53,32 @@
   CP.rowOf = function (i) { return Math.floor(i / CP.W); };
   CP.colOf = function (i) { return i % CP.W; };
 
+  // 每个非墙格固定属于 月份 / 日期 / 星期 之一，位置与含义恒定
+  CP.CELL_META = [];
+  (function () {
+    function put(idx, kind, value, label) {
+      CP.CELL_META[idx] = {
+        kind: kind,
+        value: value,
+        label: label,
+        aria: (kind === 'month' ? '月份 ' : kind === 'day' ? '日期 ' : '星期 ') + label,
+        title: '点击切换到 ' + label
+      };
+    }
+    for (var m = 1; m <= 12; m++) {
+      var mc = CP.MONTH_CELLS[m];
+      put(CP.idx(mc.r, mc.c), 'month', m, m + '月');
+    }
+    for (var d = 1; d <= 31; d++) {
+      var dc = CP.DAY_CELLS[d];
+      put(CP.idx(dc.r, dc.c), 'day', d, d + '日');
+    }
+    for (var w = 0; w < 7; w++) {
+      var wc = CP.WEEK_CELLS[w];
+      put(CP.idx(wc.r, wc.c), 'week', w, '周' + wc.label);
+    }
+  })();
+
   CP.normalizeCells = function (cells) {
     var minR = Infinity, minC = Infinity;
     for (var i = 0; i < cells.length; i++) {

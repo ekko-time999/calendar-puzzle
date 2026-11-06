@@ -107,9 +107,18 @@
       this.blocked[wi2] = 1;
 
       this.targetInfo = {};
-      this.targetInfo[mi] = { kind: 'month', sub: '月', main: String(this.target.m) };
-      this.targetInfo[di] = { kind: 'day', sub: '日', main: String(this.target.d) };
-      this.targetInfo[wi2] = { kind: 'week', sub: '星期', main: weekCell.label };
+      this.targetInfo[mi] = {
+        kind: 'month', value: this.target.m, sub: '月份', main: this.target.m + '月',
+        aria: '月份 ' + this.target.m + '月', title: '点击切换到 ' + this.target.m + '月'
+      };
+      this.targetInfo[di] = {
+        kind: 'day', value: this.target.d, sub: '日期', main: this.target.d + '日',
+        aria: '日期 ' + this.target.d + '日', title: '点击切换到 ' + this.target.d + '日'
+      };
+      this.targetInfo[wi2] = {
+        kind: 'week', value: this.target.w, sub: '星期', main: '周' + weekCell.label,
+        aria: '星期' + weekCell.label, title: '点击切换到最近的 周' + weekCell.label
+      };
     },
 
     targetCells: function () {
@@ -248,7 +257,7 @@
       this.timer = { running: false, elapsed: isFinite(elapsed) ? Math.max(0, elapsed) : 0, last: 0 };
       if (!this.won && (valid.length > 0 || cur.started)) this.startTimer();
 
-      this.buildBoard();
+      this.applyBoardRoles({ animate: false });
     },
 
     startNew: function (target, opts) {
@@ -278,15 +287,31 @@
       this.redoStack = [];
       this.timer = { running: false, elapsed: 0, last: 0 };
       this.endDrag();
+      this.fadeOutPieces();
       this.rebuildBlocked();
-      this.buildBoard();
+      this.applyBoardRoles({ animate: !opts.skipSave });
+      if (opts.flash) this.flashTargets();
       if (!opts.skipSave) {
         this.renderAll();
         this.save();
       }
     },
 
+    // 换日期时让旧拼块整体淡出，而不是瞬间消失
+    fadeOutPieces: function () {
+      if (!this.piecesLayer || !this.piecesLayer.children.length) return;
+      var ghost = document.createElement('div');
+      ghost.className = 'piece-layer piece-layer-out';
+      ghost.setAttribute('aria-hidden', 'true');
+      ghost.innerHTML = this.piecesLayer.innerHTML;
+      this.board.appendChild(ghost);
+      setTimeout(function () {
+        if (ghost.parentNode) ghost.parentNode.removeChild(ghost);
+      }, 340);
+    },
+
     // ---------- DOM ----------
+    // 底盘只建一次：56 个基础格位置恒定，换日期时只改角色与标签，不闪切
     buildBoard: function () {
       this.board.innerHTML = '';
       this.cellEls = new Array(56);
@@ -302,24 +327,8 @@
           el.dataset.r = String(r);
           el.dataset.c = String(c);
           el.style.setProperty('--i', String(r + c));
-
           if (this.wallMask[idx]) {
             el.classList.add('wall');
-            el.setAttribute('aria-hidden', 'true');
-          } else if (this.targetInfo[idx]) {
-            var info = this.targetInfo[idx];
-            el.classList.add('target', info.kind);
-            var sub = document.createElement('span');
-            sub.className = 'cell-sub';
-            sub.textContent = info.sub;
-            var main = document.createElement('span');
-            main.className = 'cell-main';
-            main.textContent = info.main;
-            el.appendChild(sub);
-            el.appendChild(main);
-            el.setAttribute('aria-label', info.sub === '星期' ? '星期' + info.main : info.sub + info.main);
-          } else {
-            el.classList.add('empty');
             el.setAttribute('aria-hidden', 'true');
           }
           this.cellEls[idx] = el;
@@ -342,36 +351,82 @@
       labelLayer.setAttribute('aria-hidden', 'true');
       this.labelLayer = labelLayer;
       this.labelEls = new Array(56);
-
-      var targets = this.targetCells() || [];
-      var targetSet = {};
-      for (var t = 0; t < targets.length; t++) targetSet[targets[t]] = 1;
-
-      for (var mi = 1; mi <= 12; mi++) {
-        var mc = CP.MONTH_CELLS[mi];
-        var midx = CP.idx(mc.r, mc.c);
-        if (!targetSet[midx]) this.addLabel(midx, 'month', mi + '月');
-      }
-      for (var di = 1; di <= 31; di++) {
-        var dc = CP.DAY_CELLS[di];
-        var didx = CP.idx(dc.r, dc.c);
-        if (!targetSet[didx]) this.addLabel(didx, 'day', String(di));
-      }
-      for (var wi = 0; wi < 7; wi++) {
-        var wc = CP.WEEK_CELLS[wi];
-        var widx = CP.idx(wc.r, wc.c);
-        if (!targetSet[widx]) this.addLabel(widx, 'week', '周' + wc.label);
-      }
-
       this.board.appendChild(labelLayer);
+
+      this.board.classList.add('entering');
+      var self = this;
+      setTimeout(function () { self.board.classList.remove('entering'); }, 1000);
+
+      this.applyBoardRoles({ animate: false });
+    },
+
+    // 按当前目标日期刷新每一格的角色：三个目标格直接显示月/日/周，
+    // 其余格继续保持标签常显，位置与含义一一对应。
+    applyBoardRoles: function (opts) {
+      opts = opts || {};
+      var changed = [];
+      for (var idx = 0; idx < 56; idx++) {
+        var el = this.cellEls[idx];
+        if (!el || this.wallMask[idx]) continue;
+
+        var wasTarget = el.classList.contains('target');
+        var info = this.targetInfo[idx];
+        var meta = CP.CELL_META[idx];
+
+        el.classList.remove('target', 'empty', 'month', 'day', 'week', 'today-cell', 'target-flash', 'target-in');
+        el.innerHTML = '';
+
+        if (info) {
+          el.classList.add('target', info.kind);
+          el.dataset.kind = info.kind;
+          el.dataset.value = String(info.value);
+          el.setAttribute('role', 'gridcell');
+          el.setAttribute('aria-label', info.aria);
+          el.title = info.title;
+          el.removeAttribute('aria-hidden');
+          var sub = document.createElement('span');
+          sub.className = 'cell-sub';
+          sub.textContent = info.sub;
+          var main = document.createElement('span');
+          main.className = 'cell-main';
+          main.textContent = info.main;
+          el.appendChild(sub);
+          el.appendChild(main);
+          if (this.labelEls[idx]) {
+            if (this.labelEls[idx].parentNode) this.labelEls[idx].parentNode.removeChild(this.labelEls[idx]);
+            this.labelEls[idx] = null;
+          }
+          if (!wasTarget) changed.push(el);
+        } else {
+          el.classList.add('empty');
+          if (meta) {
+            el.dataset.kind = meta.kind;
+            el.dataset.value = String(meta.value);
+            el.setAttribute('role', 'gridcell');
+            el.setAttribute('aria-label', meta.aria);
+            el.title = meta.title;
+            el.removeAttribute('aria-hidden');
+            if (!this.labelEls[idx]) this.addLabel(idx, meta.kind, meta.label, !opts.animate);
+          }
+        }
+      }
+
+      if (opts.animate) {
+        for (var k = 0; k < changed.length; k++) {
+          void changed[k].offsetWidth;
+          changed[k].classList.add('target-in');
+        }
+      }
+
       this.refreshTodayMarks();
     },
 
-    addLabel: function (idx, kind, text) {
+    addLabel: function (idx, kind, text, instant) {
       var el = document.createElement('span');
-      el.className = 'cell-label ' + kind;
+      el.className = 'cell-label ' + kind + (instant ? '' : ' label-shift');
       el.style.gridRow = String(CP.rowOf(idx) + 1);
       el.style.gridColumn = String(CP.colOf(idx) + 1);
+      el.dataset.idx = String(idx);
       el.textContent = text;
       this.labelEls[idx] = el;
       if (this.labelLayer) this.labelLayer.appendChild(el);
@@ -477,7 +532,11 @@
         if (!btn) return;
         var piece = Number(btn.dataset.piece);
         if (self.isPiecePlaced(piece)) self.removePiece(piece);
-        else self.selectPiece(piece);
+        else if (self.selected === piece) {
+          self.selected = null;
+          self.renderTray();
+          self.renderControls();
+        } else self.selectPiece(piece);
       });
 
       global.addEventListener('pointermove', function (e) { self.onPointerMove(e); }, { passive: false });
@@ -522,7 +581,7 @@
             self.toast('已经是今天的题目');
             return;
           }
-          self.startNew(today);
+          self.startNew(today, { flash: true });
           self.toast('已回到今天 ' + today.m + '月' + today.d + '日');
         });
       }
@@ -559,6 +618,7 @@
       this.tagEl.classList.toggle('free', !daily && !this.won);
       var backToday = $('btnBackToday');
       if (backToday) backToday.hidden = daily;
+      this.board.setAttribute('aria-label', '日历拼图棋盘 ' + title + ' 点月份 日期 或星期格可换日期');
     },
 
     renderBoardState: function () {
@@ -972,9 +1032,11 @@
         this.removePiece(piece);
         return;
       }
+      var wasSelected = this.selected === piece;
       this.selectPiece(piece);
       this.drag = {
         piece: piece,
+        wasSelected: wasSelected,
         pointerId: e.pointerId,
         startX: e.clientX,
         startY: e.clientY,
@@ -1004,7 +1066,14 @@
       var d = this.drag;
       if (!d || e.pointerId !== d.pointerId) return;
       if (!d.moved) {
+        var wasSelected = d.wasSelected;
         this.endDrag();
+        // 再点一下已选拼块即可取消选择 回到点日期格换日期的状态
+        if (wasSelected) {
+          this.selected = null;
+          this.renderTray();
+          this.renderControls();
+        }
         return;
       }
       var piece = d.piece;
@@ -1155,28 +1224,107 @@
       if (this.won || this.answerMode) return;
       if (Date.now() < this.suppressClickUntil) return;
       var cell = e.target.closest && e.target.closest('.cell');
+      var label = !cell && e.target.closest && e.target.closest('.cell-label');
+      if (label) cell = this.cellEls[Number(label.dataset.idx)];
       if (!cell) return;
       var idx = Number(cell.dataset.idx);
-      if (this.blocked[idx]) return;
+      var kind = cell.dataset.kind;
+      var value = Number(cell.dataset.value);
+
+      // 目标格不能放拼块；没有选中拼块时，点它直接换到对应的日期
+      if (this.blocked[idx]) {
+        if (this.selected !== null) {
+          this.toast('目标格不能放拼块 再点一下已选拼块可取消选择');
+          this.shakeBoard();
+          return;
+        }
+        if (kind) this.switchDateFromCell(kind, value, cell);
+        return;
+      }
 
       var occ = this.placedByIndex[idx];
       if (occ >= 0) {
         this.removePiece(occ);
         return;
       }
-      if (this.selected === null) {
-        this.toast('先在下方选一块拼块');
-        this.shakeBoard();
+      if (this.selected !== null) {
+        var anchor = this.findTapAnchor(this.selected, idx);
+        if (!anchor) {
+          this.toast('这个位置放不下 换个格子');
+          this.shakeBoard();
+          return;
+        }
+        var state = this.pieceStates[this.selected];
+        this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
         return;
       }
-      var anchor = this.findTapAnchor(this.selected, idx);
-      if (!anchor) {
-        this.toast('这个位置放不下 换个格子');
-        this.shakeBoard();
+      // 没有选中拼块时，月 / 日 / 星期格都可以直接切换日期
+      if (kind) {
+        this.switchDateFromCell(kind, value, cell);
         return;
       }
-      var state = this.pieceStates[this.selected];
-      this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
+      this.toast('先在下方选一块拼块');
+      this.shakeBoard();
+    },
+
+    // 星期格落在当前月份里与该星期最接近的那一天
+    pickDateForWeekday: function (week) {
+      var year = new Date().getFullYear();
+      var maxDay = CP.daysInMonth(this.target.m, year);
+      var best = this.target.d;
+      var bestDist = Infinity;
+      for (var d = 1; d <= maxDay; d++) {
+        if (CP.weekdayOf(this.target.m, d, year) !== week) continue;
+        var dist = Math.abs(d - this.target.d);
+        if (dist < bestDist) { bestDist = dist; best = d; }
+      }
+      return best;
+    },
+
+    weekName: function (w) {
+      return '星期' + CP.WEEK_CELLS[w].label;
+    },
+
+    switchDateFromCell: function (kind, value, cell) {
+      if (this.won || this.answerMode) return;
+      var year = new Date().getFullYear();
+      var next = null;
+      if (kind === 'month') next = CP.normalizeTarget({ m: value, d: this.target.d }, year);
+      else if (kind === 'day') next = CP.normalizeTarget({ m: this.target.m, d: value }, year);
+      else if (kind === 'week') next = CP.normalizeTarget({ m: this.target.m, d: this.pickDateForWeekday(value) }, year);
+      if (!next) return;
+
+      if (cell) {
+        cell.classList.remove('cell-tap');
+        void cell.offsetWidth;
+        cell.classList.add('cell-tap');
+      }
+
+      if (CP.isSameTarget(next, this.target)) {
+        this.flashTargets();
+        this.toast('已经是 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
+        return;
+      }
+      this.startNew(next, { flash: true });
+      this.toast('已切换到 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
+    },
+
+    flashTargets: function () {
+      var targets = this.targetCells() || [];
+      var self = this;
+      for (var i = 0; i < targets.length; i++) {
+        var el = this.cellEls[targets[i]];
+        if (!el) continue;
+        el.classList.remove('target-flash');
+        void el.offsetWidth;
+        el.classList.add('target-flash');
+      }
+      setTimeout(function () {
+        for (var j = 0; j < targets.length; j++) {
+          var e2 = self.cellEls[targets[j]];
+          if (e2) e2.classList.remove('target-flash');
+        }
+      }, 700);
     },
 
     onBoardPointerMove: function (e) {
