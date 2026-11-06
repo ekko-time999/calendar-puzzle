@@ -28,6 +28,10 @@
     <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
     <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+    <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5Z"/></symbol>
+    <symbol id="i-award" viewBox="0 0 24 24"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></symbol>
+    <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></symbol>
+    <symbol id="i-gauge" viewBox="0 0 24 24"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></symbol>
   </svg>
 
   <div class="app">
@@ -192,24 +196,60 @@
   </div>
 
   <div id="statsModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="statsModalTitle">
-    <div class="modal-card">
+    <div class="modal-card stats-card">
       <div class="modal-head">
         <h2 id="statsModalTitle">统计</h2>
         <button class="modal-close" type="button" data-close aria-label="关闭">
           <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
         </button>
       </div>
-      <div id="statsGrid" class="stats-grid"></div>
-      <div class="heatmap-block">
-        <div class="heatmap-title">
-          <h3>最近 8 周</h3>
-          <span>按实际完成的日期记录</span>
+      <div class="stats-summary">
+        <div class="stat-hero">
+          <span class="stat-icon hero-icon"><svg class="ico" aria-hidden="true"><use href="#i-flame"/></svg></span>
+          <div class="stat-main">
+            <span class="stat-label">连续每日挑战</span>
+            <div class="stat-value"><strong id="statStreak">0</strong><span class="unit">天</span></div>
+          </div>
+          <span id="statToday" class="stat-chip">今日待完成</span>
         </div>
-        <div class="heatmap-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
-        <div id="heatmap" class="heatmap"></div>
-        <p class="hint-text">深色为今日挑战完成 浅色为自由日期完成 空心为未完成</p>
+        <div class="stats-row">
+          <div class="stat-mini">
+            <span class="stat-icon"><svg class="ico" aria-hidden="true"><use href="#i-award"/></svg></span>
+            <span class="stat-label">完成局数</span>
+            <div class="stat-value"><strong id="statWins">0</strong><span class="unit">局</span></div>
+          </div>
+          <div class="stat-mini">
+            <span class="stat-icon"><svg class="ico" aria-hidden="true"><use href="#i-clock"/></svg></span>
+            <span class="stat-label">最佳时间</span>
+            <div class="stat-value time"><strong id="statBest">—</strong></div>
+          </div>
+          <div class="stat-mini">
+            <span class="stat-icon"><svg class="ico" aria-hidden="true"><use href="#i-gauge"/></svg></span>
+            <span class="stat-label">平均时间</span>
+            <div class="stat-value time"><strong id="statAvg">—</strong></div>
+          </div>
+        </div>
       </div>
-      <p class="stats-foot" id="statsFoot"></p>
+      <div class="heat-block">
+        <div class="heat-head">
+          <h3>最近 8 周</h3>
+          <span id="heatDetail" class="heat-detail" aria-live="polite">点按日期查看</span>
+        </div>
+        <div class="heat-body">
+          <div class="heat-weekdays" aria-hidden="true"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+          <div id="heatmap" class="heatmap" role="group" aria-label="最近八周完成情况"></div>
+        </div>
+        <div class="heat-legend" aria-hidden="true">
+          <span class="heat-key"><i class="key-dot daily"></i>每日挑战</span>
+          <span class="heat-key"><i class="key-dot free"></i>自由日期</span>
+          <span class="heat-key"><i class="key-dot empty"></i>未完成</span>
+          <span class="heat-key"><i class="key-dot today"></i>今日</span>
+        </div>
+      </div>
+      <div class="stats-foot">
+        <span>每日挑战 <strong id="footDaily">0</strong> 天</span>
+        <span>查看答案 <strong id="footViewed">0</strong> 次</span>
+      </div>
     </div>
   </div>
 

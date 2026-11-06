@@ -165,64 +165,82 @@
     for (var i = 0; i < keys.length; i++) totalMs += Number(stats.days[keys[i]].ms) || 0;
     var avg = wins ? totalMs / wins : null;
 
-    var grid = $('statsGrid');
-    grid.innerHTML = '';
-    var cards = [
-      { label: '连续每日挑战', value: String(streak), unit: '天' },
-      { label: '完成局数', value: String(wins), unit: '局' },
-      { label: '最佳时间', value: CP.Storage.formatDuration(stats.bestMs), unit: '' },
-      { label: '平均时间', value: CP.Storage.formatDuration(avg), unit: '' }
-    ];
-    cards.forEach(function (card, index) {
-      var el = document.createElement('div');
-      el.className = 'stat-card';
-      el.style.setProperty('--i', String(index));
-      var span = document.createElement('span');
-      span.textContent = card.label;
-      var strong = document.createElement('strong');
-      strong.textContent = card.value;
-      el.appendChild(span);
-      el.appendChild(strong);
-      if (card.unit) {
-        var em = document.createElement('em');
-        em.textContent = card.unit;
-        el.appendChild(em);
-      }
-      grid.appendChild(el);
-    });
+    $('statStreak').textContent = String(streak);
+    $('statWins').textContent = String(wins);
+    $('statBest').textContent = CP.Storage.formatDuration(stats.bestMs);
+    $('statAvg').textContent = CP.Storage.formatDuration(avg);
 
-    var dailyCount = Object.keys(stats.dailyDays).length;
-    $('statsFoot').textContent = '每日挑战完成 ' + dailyCount + ' 天 查看答案 ' + (stats.viewed || 0) + ' 次';
+    var chip = $('statToday');
+    var todayEntry = stats.days[todayKey];
+    if (todayEntry && todayEntry.daily) {
+      chip.textContent = '今日已完成';
+      chip.className = 'stat-chip done';
+    } else if (todayEntry) {
+      chip.textContent = '今日自由完成';
+      chip.className = 'stat-chip free';
+    } else {
+      chip.textContent = '今日待完成';
+      chip.className = 'stat-chip';
+    }
+
+    $('footDaily').textContent = String(Object.keys(stats.dailyDays).length);
+    $('footViewed').textContent = String(stats.viewed || 0);
 
     renderHeatmap(stats, todayKey);
   }
 
   function renderHeatmap(stats, todayKey) {
     var heatmap = $('heatmap');
+    var detail = $('heatDetail');
     heatmap.innerHTML = '';
     var now = new Date();
     var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    // 8 列（每周一列）× 7 行，起点为 7 周前的周日
     var start = CP.Storage.addDays(today, -(today.getDay() + 49));
 
     for (var i = 0; i < 56; i++) {
       var day = CP.Storage.addDays(start, i);
       var key = CP.dateKey(day);
       var entry = stats.days[key];
-      var cell = document.createElement('div');
+      var dateText = (day.getMonth() + 1) + '月' + day.getDate() + '日';
+      var info;
+      var cell = document.createElement('button');
+      cell.type = 'button';
       cell.className = 'heat-cell';
       cell.style.setProperty('--i', String(i));
-      cell.textContent = String(day.getDate());
+
       if (entry) {
-        cell.classList.add('solved');
-        if (!entry.daily) cell.classList.add('free');
-        cell.title = key + ' 完成 ' + CP.Storage.formatDuration(entry.ms);
+        cell.classList.add(entry.daily ? 'daily' : 'free');
+        info = dateText + (entry.daily ? ' 每日挑战完成 ' : ' 自由日期完成 ') +
+          CP.Storage.formatDuration(entry.ms);
+      } else if (day.getTime() > today.getTime()) {
+        cell.classList.add('future');
+        info = dateText + ' 未开始';
       } else {
-        cell.title = key + ' 未完成';
+        info = dateText + ' 未完成';
       }
       if (key === todayKey) cell.classList.add('today');
-      if (day.getTime() > today.getTime()) cell.classList.add('future');
+
+      cell.title = info;
+      cell.setAttribute('aria-label', info);
+      cell.dataset.info = info;
+      cell.addEventListener('click', function () {
+        detail.textContent = this.dataset.info;
+        if (detail.animate) {
+          detail.animate([{ opacity: 0 }, { opacity: 1 }], { duration: 200, easing: 'ease-out' });
+        }
+      });
       heatmap.appendChild(cell);
     }
+
+    detail.textContent = todayEntryText(stats.days[todayKey], today);
+  }
+
+  function todayEntryText(entry, today) {
+    var dateText = (today.getMonth() + 1) + '月' + today.getDate() + '日';
+    if (!entry) return dateText + ' 未完成';
+    return dateText + (entry.daily ? ' 每日挑战完成 ' : ' 自由日期完成 ') +
+      CP.Storage.formatDuration(entry.ms);
   }
 
   function openStats() {
