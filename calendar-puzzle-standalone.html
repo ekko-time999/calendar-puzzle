@@ -615,26 +615,6 @@ a.btn:focus-visible {
 .board.locked .cell { cursor: default; }
 .board.shake { animation: boardShake 0.5s ease; }
 
-/* 棋盘图例：把月份 日期 星期与格子的对应关系直接写出来 */
-.board-legend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 4px 12px;
-  padding: 0 8px 4px;
-  font-size: 11px;
-  color: var(--muted);
-  line-height: 1.4;
-}
-.board-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.board-legend b {
-  font-weight: 600;
-  color: var(--ink-2);
-  font-variant-numeric: tabular-nums;
-}
-.board-legend .legend-tip { color: var(--muted); }
-
 .answer-bar {
   margin: 2px 6px 0;
   padding: 10px 12px;
@@ -1420,6 +1400,7 @@ a.btn:focus-visible {
       "board"
       "tray";
     gap: 10px;
+    align-content: start;
     padding: 2px 10px 10px;
   }
 
@@ -1664,12 +1645,6 @@ a.btn:focus-visible {
         <div class="board-wrap">
           <div id="board" class="board" role="grid" aria-label="日历拼图棋盘"></div>
         </div>
-        <p class="board-legend">
-          <span>月份 <b>3月</b></span>
-          <span>日期 <b>15日</b></span>
-          <span>星期 <b>周一</b></span>
-          <span class="legend-tip">顶部「日期」按钮可选年月日</span>
-        </p>
         <div id="answerBar" class="answer-bar" hidden>
           <span id="answerText">答案模式</span>
           <div class="answer-actions">
