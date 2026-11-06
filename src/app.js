@@ -5,7 +5,7 @@
   function $(id) { return document.getElementById(id); }
 
   var game = null;
-  var dateSel = { m: 1, d: 1, w: 0 };
+  var dateSel = CP.normalizeTarget(CP.todayTarget());
   var lastFocus = null;
   var deferredPrompt = null;
 
@@ -43,7 +43,7 @@
   }
 
   // ---------- 日期选择 ----------
-  // 星期不开放选择，一律按年月日现算
+  // 年 月 日都可选，星期一律按所选年月日现算
   function currentYear() { return new Date().getFullYear(); }
 
   function buildDateChips() {
@@ -84,8 +84,11 @@
   }
 
   function updateDateUI() {
-    dateSel = CP.normalizeTarget(dateSel);
-    var maxDay = CP.daysInMonth(dateSel.m, currentYear());
+    dateSel = CP.normalizeTarget(dateSel) || CP.todayTarget();
+    var maxDay = CP.daysInMonth(dateSel.m, dateSel.y);
+
+    var yearInput = $('yearInput');
+    if (yearInput && document.activeElement !== yearInput) yearInput.value = String(dateSel.y);
 
     var monthChips = $('monthGrid').querySelectorAll('.chip');
     for (var i = 0; i < monthChips.length; i++) {
@@ -101,20 +104,44 @@
       dayChips[j].classList.toggle('on', v === dateSel.d);
     }
 
-    $('datePreview').textContent = dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
+    $('datePreview').textContent = dateSel.y + '年' + dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
     var warning = $('dateWarning');
     var hasProgress = game && (game.placements.length > 0 || game.answerMode);
     warning.hidden = !hasProgress;
   }
 
+  function setYear(y) {
+    var next = Math.round(Number(y));
+    if (!isFinite(next)) return;
+    next = Math.max(1, Math.min(9999, next));
+    dateSel = CP.normalizeTarget({ y: next, m: dateSel.m, d: dateSel.d });
+    updateDateUI();
+  }
+
+  function bindYearControls() {
+    var input = $('yearInput');
+    if (!input) return;
+    $('yearPrev').addEventListener('click', function () { setYear(dateSel.y - 1); });
+    $('yearNext').addEventListener('click', function () { setYear(dateSel.y + 1); });
+    input.addEventListener('change', function () { setYear(input.value); });
+    input.addEventListener('blur', function () { input.value = String(dateSel.y); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        setYear(input.value);
+        input.blur();
+      }
+    });
+  }
+
   function openDateModal() {
-    dateSel = CP.normalizeTarget({ m: game.target.m, d: game.target.d }) || CP.todayTarget();
+    dateSel = CP.normalizeTarget({ y: game.target.y, m: game.target.m, d: game.target.d }) || CP.todayTarget();
     updateDateUI();
     openModal($('dateModal'));
   }
 
   function applyDate() {
-    var target = CP.normalizeTarget({ m: dateSel.m, d: dateSel.d });
+    var target = CP.normalizeTarget({ y: dateSel.y, m: dateSel.m, d: dateSel.d });
     if (!target) return;
     var same = CP.isSameTarget(target, game.target) && !game.won && !game.answerMode;
     closeModal($('dateModal'));
@@ -122,8 +149,9 @@
       game.toast('已经是这一局了');
       return;
     }
-    game.startNew(target);
-    game.toast('已开始 ' + target.m + '月' + target.d + '日 ' + weekName(target.w));
+    game.startNew(target, { flash: true });
+    var yPrefix = target.y === currentYear() ? '' : target.y + '年';
+    game.toast('已开始 ' + yPrefix + target.m + '月' + target.d + '日 ' + weekName(target.w));
   }
 
   // ---------- 统计 ----------
@@ -205,7 +233,8 @@
   // ---------- 胜利 ----------
   function showWin(info) {
     var week = CP.WEEK_CELLS[info.target.w];
-    $('winSub').textContent = info.target.m + '月' + info.target.d + '日 星期' + week.label;
+    var yPrefix = info.target.y === currentYear() ? '' : info.target.y + '年';
+    $('winSub').textContent = yPrefix + info.target.m + '月' + info.target.d + '日 星期' + week.label;
     $('winTime').textContent = CP.Storage.formatDuration(info.ms);
     $('winMoves').textContent = String(info.moves);
     $('winHints').textContent = String(info.hints);
@@ -385,6 +414,7 @@
     window.game = game;
 
     buildDateChips();
+    bindYearControls();
 
     $('btnDate').addEventListener('click', openDateModal);
     $('btnStats').addEventListener('click', openStats);
@@ -396,10 +426,9 @@
       updateDateUI();
     });
     $('btnRandom').addEventListener('click', function () {
-      var year = currentYear();
       var m = Math.floor(Math.random() * 12) + 1;
-      var d = Math.floor(Math.random() * CP.daysInMonth(m, year)) + 1;
-      dateSel = CP.normalizeTarget({ m: m, d: d });
+      var d = Math.floor(Math.random() * CP.daysInMonth(m, dateSel.y)) + 1;
+      dateSel = CP.normalizeTarget({ y: dateSel.y, m: m, d: d });
       updateDateUI();
     });
 

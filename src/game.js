@@ -37,7 +37,7 @@
     this.stats = this.data.stats || CP.Storage.defaultStats();
 
     var today = CP.todayTarget();
-    this.target = { m: today.m, d: today.d, w: today.w };
+    this.target = { y: today.y, m: today.m, d: today.d, w: today.w };
     this.playDayKey = today.key;
 
     this.placements = [];
@@ -109,15 +109,15 @@
       this.targetInfo = {};
       this.targetInfo[mi] = {
         kind: 'month', value: this.target.m, sub: '月份', main: this.target.m + '月',
-        aria: '月份 ' + this.target.m + '月', title: '点击切换到 ' + this.target.m + '月'
+        aria: '月份 ' + this.target.m + '月', title: '月份 ' + this.target.m + '月'
       };
       this.targetInfo[di] = {
         kind: 'day', value: this.target.d, sub: '日期', main: this.target.d + '日',
-        aria: '日期 ' + this.target.d + '日', title: '点击切换到 ' + this.target.d + '日'
+        aria: '日期 ' + this.target.d + '日', title: '日期 ' + this.target.d + '日'
       };
       this.targetInfo[wi2] = {
         kind: 'week', value: this.target.w, sub: '星期', main: '周' + weekCell.label,
-        aria: '星期' + weekCell.label, title: '点击切换到最近的 周' + weekCell.label
+        aria: '星期' + weekCell.label, title: '星期' + weekCell.label
       };
     },
 
@@ -127,16 +127,17 @@
 
     isValidTarget: function (t) {
       if (!t) return false;
-      var y = new Date().getFullYear();
+      var y = Number(t.y) || new Date().getFullYear();
       var m = Number(t.m);
       var d = Number(t.d);
-      return Number.isInteger(m) && m >= 1 && m <= 12 &&
+      return y >= 1 && Number.isInteger(m) && m >= 1 && m <= 12 &&
         Number.isInteger(d) && d >= 1 && d <= CP.daysInMonth(m, y);
     },
 
     isTodayChallenge: function () {
       var now = new Date();
-      return this.target.m === now.getMonth() + 1 &&
+      return this.target.y === now.getFullYear() &&
+        this.target.m === now.getMonth() + 1 &&
         this.target.d === now.getDate() &&
         this.target.w === now.getDay();
     },
@@ -144,7 +145,8 @@
     // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
     checkDayRollover: function (notify) {
       var today = CP.todayTarget();
-      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) {
+      if (this.target.y === today.y && this.target.m === today.m &&
+        this.target.d === today.d && this.target.w === today.w) {
         this.refreshTodayMarks();
         return false;
       }
@@ -263,7 +265,7 @@
     startNew: function (target, opts) {
       opts = opts || {};
       var t = CP.normalizeTarget(target) || CP.todayTarget();
-      this.target = { m: t.m, d: t.d, w: t.w };
+      this.target = { y: t.y, m: t.m, d: t.d, w: t.w };
       this.playDayKey = CP.dateKey(new Date());
       this.placements = [];
       this.pieceStates = [];
@@ -360,8 +362,8 @@
       this.applyBoardRoles({ animate: false });
     },
 
-    // 按当前目标日期刷新每一格的角色：三个目标格直接显示月/日/周，
-    // 其余格继续保持标签常显，位置与含义一一对应。
+    // 所有非墙格永远用同一套标签：月份 3月 / 日期 15日 / 星期 周一
+    // 位置、字号、颜色层级完全一致，只有选中态由格子的底色与描边体现。
     applyBoardRoles: function (opts) {
       opts = opts || {};
       var changed = [];
@@ -372,43 +374,30 @@
         var wasTarget = el.classList.contains('target');
         var info = this.targetInfo[idx];
         var meta = CP.CELL_META[idx];
+        if (!meta) continue;
 
         el.classList.remove('target', 'empty', 'month', 'day', 'week', 'today-cell', 'target-flash', 'target-in');
         el.innerHTML = '';
+        el.dataset.kind = meta.kind;
+        el.dataset.value = String(meta.value);
+        el.setAttribute('role', 'gridcell');
+        el.removeAttribute('aria-hidden');
 
         if (info) {
           el.classList.add('target', info.kind);
-          el.dataset.kind = info.kind;
-          el.dataset.value = String(info.value);
-          el.setAttribute('role', 'gridcell');
           el.setAttribute('aria-label', info.aria);
           el.title = info.title;
-          el.removeAttribute('aria-hidden');
-          var sub = document.createElement('span');
-          sub.className = 'cell-sub';
-          sub.textContent = info.sub;
-          var main = document.createElement('span');
-          main.className = 'cell-main';
-          main.textContent = info.main;
-          el.appendChild(sub);
-          el.appendChild(main);
-          if (this.labelEls[idx]) {
-            if (this.labelEls[idx].parentNode) this.labelEls[idx].parentNode.removeChild(this.labelEls[idx]);
-            this.labelEls[idx] = null;
-          }
           if (!wasTarget) changed.push(el);
         } else {
           el.classList.add('empty');
-          if (meta) {
-            el.dataset.kind = meta.kind;
-            el.dataset.value = String(meta.value);
-            el.setAttribute('role', 'gridcell');
-            el.setAttribute('aria-label', meta.aria);
-            el.title = meta.title;
-            el.removeAttribute('aria-hidden');
-            if (!this.labelEls[idx]) this.addLabel(idx, meta.kind, meta.label, !opts.animate);
-          }
+          el.setAttribute('aria-label', meta.aria);
+          el.title = meta.title;
         }
+
+        var label = this.labelEls[idx];
+        if (!label) label = this.addLabel(idx, meta.kind, meta.label);
+        label.textContent = meta.label;
+        label.className = 'cell-label ' + meta.kind + (info ? ' target' : '');
       }
 
       if (opts.animate) {
@@ -421,9 +410,9 @@
       this.refreshTodayMarks();
     },
 
-    addLabel: function (idx, kind, text, instant) {
+    addLabel: function (idx, kind, text) {
       var el = document.createElement('span');
-      el.className = 'cell-label ' + kind + (instant ? '' : ' label-shift');
+      el.className = 'cell-label ' + kind;
       el.style.gridRow = String(CP.rowOf(idx) + 1);
       el.style.gridColumn = String(CP.colOf(idx) + 1);
       el.dataset.idx = String(idx);
@@ -433,7 +422,7 @@
       return el;
     },
 
-    // 今日三格始终鲜明：目标格用自身高亮块，非目标格在标签层加描边与「今」角标
+    // 今天的三个格统一用一个强调角标标出 选中态则统一用底色与描边
     refreshTodayMarks: function () {
       var today = CP.todayTarget();
       var todayCells = CP.targetCells(today.m, today.d, today.w) || [];
@@ -450,54 +439,196 @@
       for (var idx = 0; idx < 56; idx++) {
         var label = this.labelEls[idx];
         if (!label) continue;
-        label.classList.toggle('today-other', !!todaySet[idx]);
+        label.classList.toggle('is-today', !!todaySet[idx]);
       }
     },
 
     // 把一块拼图画成完整剪影：相邻格互相补缝，只在真正的轮廓上做圆角
-    shapeLayer: function (piece, flip, rot, r, c, opts) {
-      opts = opts || {};
-      var def = CP.PIECE_DEFS[piece];
-      var cells = CP.transformCells(def.cells, flip, rot);
+    // 把一组小格合成一条平滑轮廓：外角与凹角都统一倒圆，内部没有任何分格线
+    buildShapeSvg: function (cells, opts) {
+      var cw = opts.cellW;
+      var ch = opts.cellH;
+      var gap = opts.gap;
+      var radius = opts.radius;
       var map = {};
-      var maxR = 0, maxC = 0;
-      for (var i = 0; i < cells.length; i++) {
+      var maxR = 0;
+      var maxC = 0;
+      var i;
+      for (i = 0; i < cells.length; i++) {
         map[cells[i][0] + ',' + cells[i][1]] = 1;
         if (cells[i][0] > maxR) maxR = cells[i][0];
         if (cells[i][1] > maxC) maxC = cells[i][1];
       }
-      var w = maxC + 1, h = maxR + 1;
+      var w = maxC + 1;
+      var h = maxR + 1;
+      var width = w * cw + (w - 1) * gap;
+      var height = h * ch + (h - 1) * gap;
+
+      var xs = [];
+      var ys = [];
+      var xSet = {};
+      var ySet = {};
+      var rects = [];
+      function putX(v) { if (!xSet[v]) { xSet[v] = 1; xs.push(v); } }
+      function putY(v) { if (!ySet[v]) { ySet[v] = 1; ys.push(v); } }
+
+      for (i = 0; i < cells.length; i++) {
+        var lr = cells[i][0];
+        var lc = cells[i][1];
+        var right = map[lr + ',' + (lc + 1)];
+        var down = map[(lr + 1) + ',' + lc];
+        var x0 = lc * (cw + gap);
+        var y0 = lr * (ch + gap);
+        var x1 = x0 + cw + (right ? gap : 0);
+        var y1 = y0 + ch + (down ? gap : 0);
+        rects.push([x0, y0, x1, y1]);
+        putX(x0); putX(x1); putY(y0); putY(y1);
+      }
+      xs.sort(function (a, b) { return a - b; });
+      ys.sort(function (a, b) { return a - b; });
+
+      var xiOf = {};
+      var yiOf = {};
+      for (i = 0; i < xs.length; i++) xiOf[xs[i]] = i;
+      for (i = 0; i < ys.length; i++) yiOf[ys[i]] = i;
+      var nx = xs.length - 1;
+      var ny = ys.length - 1;
+      var filled = [];
+      for (i = 0; i < nx; i++) {
+        filled[i] = [];
+        for (var j = 0; j < ny; j++) filled[i][j] = false;
+      }
+      for (i = 0; i < rects.length; i++) {
+        var rct = rects[i];
+        for (var xi = xiOf[rct[0]]; xi < xiOf[rct[2]]; xi++) {
+          for (var yi = yiOf[rct[1]]; yi < yiOf[rct[3]]; yi++) filled[xi][yi] = true;
+        }
+      }
+
+      // 收集并抵消内部边，只留外轮廓
+      var edges = {};
+      function addEdge(ax, ay, bx, by) {
+        var key = ax + ',' + ay + '>' + bx + ',' + by;
+        var rev = bx + ',' + by + '>' + ax + ',' + ay;
+        if (edges[rev]) delete edges[rev];
+        else edges[key] = [ax, ay, bx, by];
+      }
+      for (i = 0; i < nx; i++) {
+        for (var jj = 0; jj < ny; jj++) {
+          if (!filled[i][jj]) continue;
+          addEdge(i, jj, i + 1, jj);
+          addEdge(i + 1, jj, i + 1, jj + 1);
+          addEdge(i + 1, jj + 1, i, jj + 1);
+          addEdge(i, jj + 1, i, jj);
+        }
+      }
+
+      var keys = Object.keys(edges);
+      var loops = [];
+      while (keys.length) {
+        var startKey = keys.shift();
+        var seg = edges[startKey];
+        if (!seg) continue;
+        delete edges[startKey];
+        var loop = [[seg[0], seg[1]]];
+        var cur = seg;
+        var guard = 0;
+        while (guard++ < 300) {
+          loop.push([cur[2], cur[3]]);
+          if (cur[2] === seg[0] && cur[3] === seg[1]) break;
+          var nextKey = null;
+          for (var q = 0; q < keys.length; q++) {
+            var s = edges[keys[q]];
+            if (s && s[0] === cur[2] && s[1] === cur[3]) { nextKey = keys[q]; break; }
+          }
+          if (!nextKey) break;
+          cur = edges[nextKey];
+          delete edges[nextKey];
+        }
+        if (loop.length > 2 && loop[loop.length - 1][0] === loop[0][0] && loop[loop.length - 1][1] === loop[0][1]) {
+          loop.pop();
+        }
+        if (loop.length >= 4) loops.push(loop);
+      }
+
+      function fmt(n) { return Math.round(n * 100) / 100; }
+      function dist(ax, ay, bx, by) {
+        var dx = bx - ax;
+        var dy = by - ay;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+      function roundedPath(nodes) {
+        var pts = nodes.map(function (n) { return [xs[n[0]], ys[n[1]]]; });
+        var count = pts.length;
+        var d = '';
+        for (var p = 0; p < count; p++) {
+          var v = pts[p];
+          var prev = pts[(p - 1 + count) % count];
+          var next = pts[(p + 1) % count];
+          var inLen = dist(prev[0], prev[1], v[0], v[1]);
+          var outLen = dist(v[0], v[1], next[0], next[1]);
+          if (inLen < 1e-6 || outLen < 1e-6) continue;
+          var cross = (v[0] - prev[0]) * (next[1] - v[1]) - (v[1] - prev[1]) * (next[0] - v[0]);
+          if (Math.abs(cross) < 1e-6) {
+            var line = (d ? ' L ' : 'M ') + fmt(v[0]) + ' ' + fmt(v[1]);
+            d += line;
+            continue;
+          }
+          var r = Math.min(radius, inLen / 2, outLen / 2);
+          var inX = v[0] + (prev[0] - v[0]) / inLen * r;
+          var inY = v[1] + (prev[1] - v[1]) / inLen * r;
+          var outX = v[0] + (next[0] - v[0]) / outLen * r;
+          var outY = v[1] + (next[1] - v[1]) / outLen * r;
+          d += (d ? ' L ' : 'M ') + fmt(inX) + ' ' + fmt(inY);
+          d += ' Q ' + fmt(v[0]) + ' ' + fmt(v[1]) + ' ' + fmt(outX) + ' ' + fmt(outY);
+        }
+        return d + ' Z';
+      }
+
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('class', 'piece-svg');
+      svg.setAttribute('width', String(Math.round(width * 100) / 100));
+      svg.setAttribute('height', String(Math.round(height * 100) / 100));
+      svg.setAttribute('viewBox', '0 0 ' + fmt(width) + ' ' + fmt(height));
+      for (i = 0; i < loops.length; i++) {
+        var path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', roundedPath(loops[i]));
+        path.setAttribute('fill', opts.color);
+        if (opts.stroke !== false) {
+          path.setAttribute('stroke', opts.stroke || 'rgba(28, 20, 12, 0.22)');
+          path.setAttribute('stroke-width', '1');
+          path.setAttribute('stroke-linejoin', 'round');
+        }
+        svg.appendChild(path);
+      }
+      return { svg: svg, width: width, height: height, w: w, h: h };
+    },
+
+    pieceRadius: function () {
+      var r = parseFloat(getComputedStyle(this.board).getPropertyValue('--piece-r'));
+      return isFinite(r) && r > 0 ? r : 7;
+    },
+
+    shapeLayer: function (piece, flip, rot, r, c, opts) {
+      opts = opts || {};
+      var def = CP.PIECE_DEFS[piece];
+      var cells = CP.transformCells(def.cells, flip, rot);
+      var m = this.measureBoard();
+      var radius = this.pieceRadius();
+      var color = opts.color || def.color;
+      var built = this.buildShapeSvg(cells, {
+        cellW: m.cellW, cellH: m.cellH, gap: m.gap, radius: radius, color: color
+      });
 
       var layer = document.createElement('div');
       layer.className = 'piece' + (opts.className ? ' ' + opts.className : '');
-      layer.style.width = 'calc(var(--cell) * ' + w + ' + var(--gap) * ' + (w - 1) + ')';
-      layer.style.height = 'calc(var(--cell) * ' + h + ' + var(--gap) * ' + (h - 1) + ')';
-      layer.style.left = 'calc(var(--cell) * ' + c + ' + var(--gap) * ' + c + ')';
-      layer.style.top = 'calc(var(--cell) * ' + r + ' + var(--gap) * ' + r + ')';
-      layer.style.setProperty('--piece-color', def.color);
-
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var sub = document.createElement('span');
-        sub.className = 'piece-cell';
-        sub.style.left = 'calc(var(--cell) * ' + lc + ' + var(--gap) * ' + lc + ')';
-        sub.style.top = 'calc(var(--cell) * ' + lr + ' + var(--gap) * ' + lr + ')';
-        sub.style.width = right ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
-        sub.style.height = down ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
-        sub.style.borderRadius = [
-          (!up && !left) ? 'var(--piece-r)' : '0',
-          (!up && !right) ? 'var(--piece-r)' : '0',
-          (!down && !right) ? 'var(--piece-r)' : '0',
-          (!down && !left) ? 'var(--piece-r)' : '0'
-        ].join(' ');
-        sub.style.background = opts.color || def.color;
-        layer.appendChild(sub);
-      }
+      layer.style.width = built.width + 'px';
+      layer.style.height = built.height + 'px';
+      layer.style.left = (c * m.pitchX) + 'px';
+      layer.style.top = (r * m.pitchY) + 'px';
+      layer.style.setProperty('--piece-color', color);
+      layer.appendChild(built.svg);
       return layer;
     },
 
@@ -573,6 +704,16 @@
       // 长时间挂在后台或一直开着时 每分钟检查是否跨天
       setInterval(function () { self.checkDayRollover(); }, 60000);
 
+      // 拼块轮廓按实测像素绘制 窗口尺寸变化后按新尺寸重新铺一遍
+      var resizeTimer = null;
+      global.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          self.renderBoardState();
+          self.renderTray();
+        }, 160);
+      });
+
       var backToday = $('btnBackToday');
       if (backToday) {
         backToday.addEventListener('click', function () {
@@ -599,12 +740,20 @@
 
     renderChallenge: function () {
       var week = CP.WEEK_CELLS[this.target.w];
+      var thisYear = new Date().getFullYear();
+      var yearDiff = this.target.y !== thisYear;
       var title = this.target.m + '月' + this.target.d + '日 星期' + week.label;
       if (this.titleEl.textContent !== title) {
         this.titleEl.textContent = title;
         this.titleEl.classList.remove('swap');
         void this.titleEl.offsetWidth;
         this.titleEl.classList.add('swap');
+      }
+      var yearEl = $('challengeYear');
+      if (yearEl) {
+        var yearText = yearDiff ? this.target.y + '年' : '';
+        if (yearEl.textContent !== yearText) yearEl.textContent = yearText;
+        yearEl.hidden = !yearDiff;
       }
       var daily = this.isTodayChallenge();
       var tag = this.won ? (daily ? '今日已完成' : '已完成') : (daily ? '今日挑战' : '自由模式');
@@ -618,7 +767,7 @@
       this.tagEl.classList.toggle('free', !daily && !this.won);
       var backToday = $('btnBackToday');
       if (backToday) backToday.hidden = daily;
-      this.board.setAttribute('aria-label', '日历拼图棋盘 ' + title + ' 点月份 日期 或星期格可换日期');
+      this.board.setAttribute('aria-label', '日历拼图棋盘 ' + (yearDiff ? this.target.y + '年' : '') + title);
     },
 
     renderBoardState: function () {
@@ -638,10 +787,13 @@
 
       var shown = this.answerMode ? (this.answers[this.answerIdx] || []) : this.placements;
       var prevSet = this.prevPieceSet || {};
+      var covered = new Uint8Array(56);
       this.shownPieceSet = {};
 
       for (i = 0; i < shown.length; i++) {
         var pl = shown[i];
+        var plCells = this.cellsOfPlacement(pl);
+        for (var ci = 0; ci < plCells.length; ci++) covered[plCells[ci]] = 1;
         var layer = this.shapeLayer(pl.piece, pl.flip, pl.rot, pl.r, pl.c, {
           className: this.answerMode ? 'answer-piece' : ''
         });
@@ -673,6 +825,10 @@
         this.piecesLayer.appendChild(hintLayer);
       }
 
+      for (i = 0; i < 56; i++) {
+        if (this.labelEls[i]) this.labelEls[i].classList.toggle('covered', !!covered[i]);
+      }
+
       if (!this.answerMode && this.preview && this.preview.cells) {
         for (i = 0; i < this.preview.cells.length; i++) {
           var pc = this.cellEls[this.preview.cells[i]];
@@ -696,43 +852,26 @@
       }
     },
 
+    miniMetrics: function () {
+      var cs = getComputedStyle(this.tray);
+      var cell = parseFloat(cs.getPropertyValue('--mini')) || 15;
+      var radius = parseFloat(cs.getPropertyValue('--mini-r')) || 3;
+      return { cell: cell, gap: 2, radius: radius };
+    },
+
     buildMini: function (btn, piece) {
       var mini = btn.querySelector('.mini');
       var state = this.pieceStates[piece];
       var cells = CP.transformCells(CP.PIECE_DEFS[piece].cells, state.flip, state.rot);
-      var map = {};
-      var maxR = 0, maxC = 0;
-      for (var i = 0; i < cells.length; i++) {
-        map[cells[i][0] + ',' + cells[i][1]] = 1;
-        if (cells[i][0] > maxR) maxR = cells[i][0];
-        if (cells[i][1] > maxC) maxC = cells[i][1];
-      }
-      var w = maxC + 1, h = maxR + 1;
+      var mm = this.miniMetrics();
+      var built = this.buildShapeSvg(cells, {
+        cellW: mm.cell, cellH: mm.cell, gap: mm.gap, radius: mm.radius,
+        color: CP.PIECE_DEFS[piece].color, stroke: false
+      });
       mini.innerHTML = '';
-      mini.style.width = 'calc(var(--mini) * ' + w + ' + ' + ((w - 1) * 2) + 'px)';
-      mini.style.height = 'calc(var(--mini) * ' + h + ' + ' + ((h - 1) * 2) + 'px)';
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var dot = document.createElement('span');
-        dot.className = 'mini-cell';
-        dot.style.left = 'calc(var(--mini) * ' + lc + ' + ' + (lc * 2) + 'px)';
-        dot.style.top = 'calc(var(--mini) * ' + lr + ' + ' + (lr * 2) + 'px)';
-        dot.style.width = right ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
-        dot.style.height = down ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
-        dot.style.borderRadius = [
-          (!up && !left) ? 'var(--mini-r)' : '0',
-          (!up && !right) ? 'var(--mini-r)' : '0',
-          (!down && !right) ? 'var(--mini-r)' : '0',
-          (!down && !left) ? 'var(--mini-r)' : '0'
-        ].join(' ');
-        dot.style.backgroundColor = CP.PIECE_DEFS[piece].color;
-        mini.appendChild(dot);
-      }
+      mini.style.width = built.width + 'px';
+      mini.style.height = built.height + 'px';
+      mini.appendChild(built.svg);
     },
 
     setMetric: function (el, value) {
@@ -1068,7 +1207,7 @@
       if (!d.moved) {
         var wasSelected = d.wasSelected;
         this.endDrag();
-        // 再点一下已选拼块即可取消选择 回到点日期格换日期的状态
+        // 再点一下已选拼块即可取消选择 换日期请用顶部日期按钮
         if (wasSelected) {
           this.selected = null;
           this.renderTray();
@@ -1137,35 +1276,15 @@
       d.bw = maxC + 1;
       d.bh = maxR + 1;
 
-      var radius = Math.max(4, Math.min(10, Math.round(m.cellW * 0.17)));
-      var color = CP.PIECE_DEFS[d.piece].color;
+      var built = this.buildShapeSvg(cells, {
+        cellW: m.cellW, cellH: m.cellH, gap: m.gap, radius: this.pieceRadius(),
+        color: CP.PIECE_DEFS[d.piece].color
+      });
 
       this.ghost.innerHTML = '';
-      this.ghost.style.width = (d.bw * m.cellW + (d.bw - 1) * m.gap) + 'px';
-      this.ghost.style.height = (d.bh * m.cellH + (d.bh - 1) * m.gap) + 'px';
-
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var dot = document.createElement('span');
-        dot.className = 'ghost-cell';
-        dot.style.left = (lc * (m.cellW + m.gap)) + 'px';
-        dot.style.top = (lr * (m.cellH + m.gap)) + 'px';
-        dot.style.width = (right ? m.cellW + m.gap : m.cellW) + 'px';
-        dot.style.height = (down ? m.cellH + m.gap : m.cellH) + 'px';
-        dot.style.borderRadius = [
-          (!up && !left) ? radius + 'px' : '0',
-          (!up && !right) ? radius + 'px' : '0',
-          (!down && !right) ? radius + 'px' : '0',
-          (!down && !left) ? radius + 'px' : '0'
-        ].join(' ');
-        dot.style.backgroundColor = color;
-        this.ghost.appendChild(dot);
-      }
+      this.ghost.style.width = built.width + 'px';
+      this.ghost.style.height = built.height + 'px';
+      this.ghost.appendChild(built.svg);
       this.ghost.classList.add('show');
     },
 
@@ -1228,17 +1347,11 @@
       if (label) cell = this.cellEls[Number(label.dataset.idx)];
       if (!cell) return;
       var idx = Number(cell.dataset.idx);
-      var kind = cell.dataset.kind;
-      var value = Number(cell.dataset.value);
 
-      // 目标格不能放拼块；没有选中拼块时，点它直接换到对应的日期
+      // 目标格不能放拼块，换日期走顶部日期按钮
       if (this.blocked[idx]) {
-        if (this.selected !== null) {
-          this.toast('目标格不能放拼块 再点一下已选拼块可取消选择');
-          this.shakeBoard();
-          return;
-        }
-        if (kind) this.switchDateFromCell(kind, value, cell);
+        this.toast('目标格不能放拼块 换日期请用上方日期按钮');
+        if (this.selected !== null) this.shakeBoard();
         return;
       }
 
@@ -1247,66 +1360,19 @@
         this.removePiece(occ);
         return;
       }
-      if (this.selected !== null) {
-        var anchor = this.findTapAnchor(this.selected, idx);
-        if (!anchor) {
-          this.toast('这个位置放不下 换个格子');
-          this.shakeBoard();
-          return;
-        }
-        var state = this.pieceStates[this.selected];
-        this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
+      if (this.selected === null) {
+        this.toast('先在下方选一块拼块 换日期请用上方日期按钮');
+        this.shakeBoard();
         return;
       }
-      // 没有选中拼块时，月 / 日 / 星期格都可以直接切换日期
-      if (kind) {
-        this.switchDateFromCell(kind, value, cell);
+      var anchor = this.findTapAnchor(this.selected, idx);
+      if (!anchor) {
+        this.toast('这个位置放不下 换个格子');
+        this.shakeBoard();
         return;
       }
-      this.toast('先在下方选一块拼块');
-      this.shakeBoard();
-    },
-
-    // 星期格落在当前月份里与该星期最接近的那一天
-    pickDateForWeekday: function (week) {
-      var year = new Date().getFullYear();
-      var maxDay = CP.daysInMonth(this.target.m, year);
-      var best = this.target.d;
-      var bestDist = Infinity;
-      for (var d = 1; d <= maxDay; d++) {
-        if (CP.weekdayOf(this.target.m, d, year) !== week) continue;
-        var dist = Math.abs(d - this.target.d);
-        if (dist < bestDist) { bestDist = dist; best = d; }
-      }
-      return best;
-    },
-
-    weekName: function (w) {
-      return '星期' + CP.WEEK_CELLS[w].label;
-    },
-
-    switchDateFromCell: function (kind, value, cell) {
-      if (this.won || this.answerMode) return;
-      var year = new Date().getFullYear();
-      var next = null;
-      if (kind === 'month') next = CP.normalizeTarget({ m: value, d: this.target.d }, year);
-      else if (kind === 'day') next = CP.normalizeTarget({ m: this.target.m, d: value }, year);
-      else if (kind === 'week') next = CP.normalizeTarget({ m: this.target.m, d: this.pickDateForWeekday(value) }, year);
-      if (!next) return;
-
-      if (cell) {
-        cell.classList.remove('cell-tap');
-        void cell.offsetWidth;
-        cell.classList.add('cell-tap');
-      }
-
-      if (CP.isSameTarget(next, this.target)) {
-        this.flashTargets();
-        this.toast('已经是 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
-        return;
-      }
-      this.startNew(next, { flash: true });
-      this.toast('已切换到 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
+      var state = this.pieceStates[this.selected];
+      this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
     },
 
     flashTargets: function () {
@@ -1489,7 +1555,7 @@
         counted: false,
         streak: 0,
         isRecord: false,
-        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        target: { y: this.target.y, m: this.target.m, d: this.target.d, w: this.target.w },
         revealed: this.revealed
       };
 
@@ -1552,7 +1618,7 @@
       if (!this.target) return;
       this.data.stats = this.stats;
       this.data.current = {
-        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        target: { y: this.target.y, m: this.target.m, d: this.target.d, w: this.target.w },
         playDay: this.playDayKey,
         placements: copyList(this.placements),
         pieceStates: this.pieceStates.map(function (s) { return { flip: s.flip, rot: s.rot }; }),

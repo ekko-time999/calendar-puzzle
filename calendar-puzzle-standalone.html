@@ -318,6 +318,20 @@ a.btn:focus-visible {
 .back-today:hover { color: var(--accent-ink); border-color: var(--accent-soft); }
 .back-today:active { transform: scale(0.95); }
 
+.challenge-year {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .challenge-tag {
   display: inline-flex;
   align-items: center;
@@ -400,7 +414,7 @@ a.btn:focus-visible {
   --cell: 56px;
   --gap: 3px;
   --pad: 11px;
-  --piece-r: 10px;
+  --piece-r: 7px;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -438,12 +452,13 @@ a.btn:focus-visible {
   filter: drop-shadow(0 3px 3px rgba(28, 19, 10, 0.24));
   will-change: transform, opacity;
 }
-.piece-cell {
-  position: absolute;
+.piece-svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* 固定标签层：月份 日期 星期始终完整显示，拼块盖上去也不隐藏 */
+/* 固定标签层：所有格统一标签规范 位置居中 字号与颜色层级一致 */
 .label-layer {
   position: absolute;
   left: var(--pad);
@@ -462,30 +477,29 @@ a.btn:focus-visible {
   position: relative;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--cell-r, 7px);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 253, 248, 0.88);
+  color: rgba(255, 253, 248, 0.84);
   text-shadow: 0 1px 2px rgba(20, 14, 8, 0.72), 0 0 3px rgba(20, 14, 8, 0.56);
-  opacity: 0.72;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  transition: color 0.22s ease, text-shadow 0.22s ease;
 }
-.cell-label.week { font-size: 10px; letter-spacing: 0; }
-
-/* 今日不是当前目标时 今天的三格仍在拼块之上鲜明标出 */
-.cell-label.today-other {
-  opacity: 1;
-  color: #fff;
+/* 选中格用同一套暖色强调：浅底 + 深字 */
+.cell-label.target {
+  color: var(--accent-ink);
   font-weight: 700;
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
-  box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--accent) 82%, transparent),
-    0 0 16px color-mix(in srgb, var(--accent) 42%, transparent);
+  text-shadow: none;
 }
-.cell-label.today-other::after {
+/* 拼块盖住的格隐藏数字 拼块看起来是一整块 */
+.cell-label.covered {
+  color: transparent;
+  text-shadow: none;
+}
+/* 今天的三个格统一用一个「今」角标 */
+.cell-label.is-today::after {
   content: '今';
   position: absolute;
   top: 2px;
@@ -496,11 +510,12 @@ a.btn:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--accent) 72%, #000 4%);
+  background: var(--accent);
   color: #fff;
   font-size: 7px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: 0;
   text-shadow: none;
   animation: todayBreath 3.4s ease-in-out infinite;
 }
@@ -527,20 +542,17 @@ a.btn:focus-visible {
   animation-delay: calc(var(--i, 0) * 9ms + 120ms);
 }
 
-/* 所有带日期含义的格都可点击换日期 */
-.board:not(.locked) .cell[data-kind] { cursor: pointer; }
-.board:not(.locked) .cell[data-kind]:active { transform: scale(0.93); }
+/* 换日期只走顶部日期按钮 底盘格子不再切换日期 */
+.board:not(.locked) .cell.empty { cursor: pointer; }
 
 /* 换日期时新旧目标格的平滑衔接 */
 .cell.target.target-in { animation: targetIn 0.42s var(--ease-out) both; }
 .cell.target.target-flash {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 58%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
     0 0 18px color-mix(in srgb, var(--accent) 30%, transparent);
 }
-.cell.cell-tap { animation: cellTap 0.28s var(--ease-press); }
-.cell-label.label-shift { animation: labelShift 0.32s var(--ease-out); }
 .piece-layer-out {
   z-index: 2;
   pointer-events: none;
@@ -569,63 +581,25 @@ a.btn:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
+/* 三目标格统一用同一个暖色强调 不再按月份 日期 星期各配一种颜色 */
 .cell.target {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  padding: 3px 4px 4px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  background: linear-gradient(156deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 76%, #fff));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 }
-.cell.target.month { background: linear-gradient(156deg, #fff0e6, #ffe2d2); color: #8a3416; }
-.cell.target.day { background: linear-gradient(156deg, #e9f8f4, #d7efe9); color: #0f5f55; }
-.cell.target.week { background: linear-gradient(156deg, #efedfe, #e2e0fc); color: #3730a3; }
-
-.cell.target { position: relative; }
-/* 今日目标格角标 用轻呼吸提示 不干扰数字 */
-.cell.target.today-cell::after {
-  content: '今';
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 2px;
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
-  font-size: 7px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0;
-  opacity: 0.86;
-  animation: todayBreath 3.4s ease-in-out infinite;
+.cell.target.today-cell {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 56%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-/* 深色模式下日期格配色 避免浅底刺眼 */
+/* 深色模式保持同一套强调 只换深底浅字 */
 @media (prefers-color-scheme: dark) {
-  .cell.target { border-color: rgba(255, 255, 255, 0.06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07); }
-  .cell.target.month { background: linear-gradient(156deg, #3a2418, #2e1c12); color: #ffb39c; }
-  .cell.target.day { background: linear-gradient(156deg, #17302b, #132724); color: #7ee0cf; }
-  .cell.target.week { background: linear-gradient(156deg, #242144, #1c1a36); color: #b3aefc; }
+  .cell.target {
+    background: linear-gradient(156deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 78%, #000));
+    border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  }
 }
-
-.cell-sub {
-  font-size: 8px;
-  line-height: 1;
-  opacity: 0.72;
-  letter-spacing: 0.04em;
-}
-.cell-main {
-  font-size: clamp(13px, 2.2vw, 16px);
-  font-weight: 700;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-}
-.cell.target.week .cell-main { font-size: clamp(15px, 2.6vw, 18px); }
 
 .cell.preview-valid {
   background: rgba(42, 157, 143, 0.22);
@@ -654,16 +628,12 @@ a.btn:focus-visible {
   line-height: 1.4;
 }
 .board-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.board-legend i {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  display: block;
+.board-legend b {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
-.board-legend i.month { background: #f0a07a; }
-.board-legend i.day { background: var(--teal); }
-.board-legend i.week { background: var(--indigo); }
-.board-legend .legend-tip { color: var(--ink-2); }
+.board-legend .legend-tip { color: var(--muted); }
 
 .answer-bar {
   margin: 2px 6px 0;
@@ -765,10 +735,6 @@ a.btn:focus-visible {
 /* 旋转 翻转后在托盘里做一次形变衔接 */
 .mini.turn { animation: miniTurn 0.34s var(--ease-out); }
 .mini.flipx { animation: miniFlip 0.34s var(--ease-out); }
-.mini-cell {
-  position: absolute;
-  display: block;
-}
 .tray-num {
   position: absolute;
   right: 8px;
@@ -897,10 +863,6 @@ a.btn:focus-visible {
   transition: opacity 0.16s ease;
 }
 .drag-ghost.show { opacity: 0.96; }
-.drag-ghost .ghost-cell {
-  position: absolute;
-  display: block;
-}
 .drag-ghost.invalid { opacity: 0.4; filter: grayscale(0.4) drop-shadow(0 12px 14px rgba(25, 18, 12, 0.22)); }
 
 /* ---------- 安装引导 ---------- */
@@ -1079,6 +1041,50 @@ a.btn:focus-visible {
 
 .date-section { margin-bottom: 14px; }
 .date-section h3 { margin: 0 0 7px; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.1em; }
+
+/* 年份选择：减 输入 加 任何年份都能直接输入 */
+.year-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.year-step {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease);
+}
+.year-step .ico { width: 16px; height: 16px; }
+.year-step:hover { background: var(--surface); border-color: var(--line-strong); transform: translateY(-1px) scale(1.04); }
+.year-step:active { transform: scale(0.94); }
+.year-input {
+  width: 116px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.year-input:focus-visible,
+.year-step:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 58%, transparent); outline-offset: 2px; }
+.year-input::-webkit-outer-spin-button,
+.year-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 .chips { display: grid; gap: 6px; }
 .month-chips { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -1301,15 +1307,6 @@ a.btn:focus-visible {
   70% { opacity: 1; transform: scale(1.03); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes cellTap {
-  0% { transform: scale(1); }
-  45% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-@keyframes labelShift {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 0.72; transform: none; }
-}
 @keyframes layerFade {
   from { opacity: 0.92; }
   to { opacity: 0; }
@@ -1443,14 +1440,14 @@ a.btn:focus-visible {
     flex-wrap: nowrap;
     gap: 8px;
   }
-  .challenge-left { display: flex; align-items: center; gap: 7px; flex: 1 1 auto; min-width: 0; }
+  .challenge-left { display: block; flex: 1 1 auto; min-width: 0; }
   .challenge-tag { padding: 2px 7px; font-size: 9px; flex: 0 0 auto; }
+  .challenge-year { padding: 2px 7px; font-size: 9px; }
   .challenge h1 {
-    margin: 0;
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 4px 0 0;
+    font-size: 15px;
+    white-space: normal;
+    overflow: visible;
   }
   .challenge-sub { display: none; }
   .metrics { width: auto; flex: 0 0 auto; gap: 5px; }
@@ -1465,17 +1462,12 @@ a.btn:focus-visible {
     --cell: max(28px, min(11.5vw, 46px, calc((100dvh - 430px) / 8)));
     --gap: 2px;
     --pad: 8px;
-    --piece-r: 7px;
+    --piece-r: 6px;
     border-radius: 16px;
   }
   .cell { border-radius: 6px; }
-  .cell.target { padding: 2px 3px 3px; }
-  .cell-sub { font-size: 7px; }
-  .cell-main { font-size: clamp(12px, 3.4vw, 15px); }
-  .cell.target.week .cell-main { font-size: clamp(14px, 4vw, 17px); }
-  .cell-label { font-size: 9.5px; border-radius: 6px; }
-  .cell-label.week { font-size: 8.5px; }
-  .cell-label.today-other::after { min-width: 10px; height: 10px; font-size: 6px; top: 1px; right: 1px; }
+  .cell-label { font-size: 9.5px; }
+  .cell-label.is-today::after { min-width: 10px; height: 10px; font-size: 6px; top: 1px; right: 1px; }
 
   .tray-card { padding: 8px 9px 6px; --mini: 11px; --mini-r: 3px; }
   .tray-head h2 { font-size: 13px; }
@@ -1533,31 +1525,12 @@ a.btn:focus-visible {
     --cell: max(26px, calc((100dvh - 158px) / 8));
     --gap: 2px;
     --pad: 8px;
-    --piece-r: 7px;
+    --piece-r: 5px;
     border-radius: 16px;
   }
   .cell { border-radius: 5px; }
-  .cell.target { padding: 1px 2px 2px; }
-  .cell-sub { font-size: 7px; }
-  .cell-main { font-size: 13px; }
-  .cell.target.week .cell-main { font-size: 15px; }
-  .cell-label { font-size: 9px; border-radius: 5px; }
-  .cell-label.week { font-size: 8px; }
-  .cell-label.today-other::after { width: 8px; min-width: 0; height: 8px; padding: 0; font-size: 0; border-radius: 50%; top: 2px; right: 2px; }
-  /* 横屏格子小 今日角标收成圆点 不挡数字 */
-  .cell.target.today-cell::after {
-    width: 4px;
-    height: 4px;
-    min-width: 0;
-    padding: 0;
-    top: 3px;
-    right: 3px;
-    font-size: 0;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: none;
-    opacity: 0.55;
-  }
+  .cell-label { font-size: 9px; }
+  .cell-label.is-today::after { width: 8px; min-width: 0; height: 8px; padding: 0; font-size: 0; border-radius: 50%; top: 2px; right: 2px; }
 
   .tray-card { padding: 8px 9px 7px; --mini: 10px; --mini-r: 3px; }
   .tray-head h2 { font-size: 12px; }
@@ -1637,6 +1610,8 @@ a.btn:focus-visible {
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 3.4"/><path d="M12 17h.01"/></symbol>
     <symbol id="i-install" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
   </svg>
 
@@ -1670,6 +1645,7 @@ a.btn:focus-visible {
         <div class="challenge-left">
           <div class="challenge-head">
             <span id="challengeTag" class="challenge-tag">今日挑战</span>
+            <span id="challengeYear" class="challenge-year" hidden></span>
             <button id="btnBackToday" class="back-today" type="button" hidden>
               <svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg>回到今天
             </button>
@@ -1689,10 +1665,10 @@ a.btn:focus-visible {
           <div id="board" class="board" role="grid" aria-label="日历拼图棋盘"></div>
         </div>
         <p class="board-legend">
-          <span><i class="month"></i>月份</span>
-          <span><i class="day"></i>日期</span>
-          <span><i class="week"></i>星期</span>
-          <span class="legend-tip">点格子直接换日期</span>
+          <span>月份 <b>3月</b></span>
+          <span>日期 <b>15日</b></span>
+          <span>星期 <b>周一</b></span>
+          <span class="legend-tip">顶部「日期」按钮可选年月日</span>
         </p>
         <div id="answerBar" class="answer-bar" hidden>
           <span id="answerText">答案模式</span>
@@ -1774,8 +1750,20 @@ a.btn:focus-visible {
         </button>
       </div>
       <div class="date-preview">
-        <strong id="datePreview">11月2日 星期一</strong>
+        <strong id="datePreview">2026年11月6日 星期五</strong>
         <span>星期按年月日自动计算</span>
+      </div>
+      <div class="date-section">
+        <h3>年份</h3>
+        <div class="year-row">
+          <button id="yearPrev" class="year-step" type="button" aria-label="上一年">
+            <svg class="ico" aria-hidden="true"><use href="#i-minus"/></svg>
+          </button>
+          <input id="yearInput" class="year-input" type="number" inputmode="numeric" min="1" max="9999" step="1" aria-label="年份">
+          <button id="yearNext" class="year-step" type="button" aria-label="下一年">
+            <svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg>
+          </button>
+        </div>
       </div>
       <div class="date-section">
         <h3>月份</h3>
@@ -1829,7 +1817,7 @@ a.btn:focus-visible {
         <h3>怎么玩</h3>
         <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格 星期按所选年月日自动算出 不用手动选择</p>
         <ul>
-          <li>没选中拼块时 点棋盘上的月份 日期 星期格可以直接换到那一天 顶部回到今天可一键还原</li>
+          <li>换日期请点顶部「日期」按钮 可以选年 月 日 星期按所选日期自动计算 顶部回到今天可一键还原</li>
           <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
           <li>点旋转或翻转调整选中拼块的朝向 允许翻转</li>
           <li>点棋盘上已放置的拼块可以取下 点拼块托盘里的已用拼块也可以取下</li>
@@ -1953,7 +1941,7 @@ a.btn:focus-visible {
         value: value,
         label: label,
         aria: (kind === 'month' ? '月份 ' : kind === 'day' ? '日期 ' : '星期 ') + label,
-        title: '点击切换到 ' + label
+        title: (kind === 'month' ? '月份 ' : kind === 'day' ? '日期 ' : '星期 ') + label
       };
     }
     for (var m = 1; m <= 12; m++) {
@@ -2024,6 +2012,7 @@ a.btn:focus-visible {
 
   CP.targetForDate = function (date) {
     return {
+      y: date.getFullYear(),
       m: date.getMonth() + 1,
       d: date.getDate(),
       w: date.getDay(),
@@ -2035,30 +2024,39 @@ a.btn:focus-visible {
     return CP.targetForDate(new Date());
   };
 
-  // 某年某月共有多少天，闰年的 2 月会自动得到 29 天
+  // 某年某月共有多少天，闰年规则完整覆盖任意年份
   CP.daysInMonth = function (m, y) {
-    return new Date(y || new Date().getFullYear(), m, 0).getDate();
+    var year = Number(y) || new Date().getFullYear();
+    if (m === 2) {
+      return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+    }
+    return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1] || 31;
   };
 
-  // 星期完全由年月日算出，与 Date.getDay() 一致：0 = 周日
+  // 星期完全由年月日算出，用 setFullYear 保证 1–99 年也按真实年份计算
   CP.weekdayOf = function (m, d, y) {
-    return new Date(y || new Date().getFullYear(), m - 1, d).getDay();
+    var year = Number(y) || new Date().getFullYear();
+    var dt = new Date(2000, 0, 1, 12, 0, 0);
+    dt.setFullYear(year, m - 1, d);
+    return dt.getDay();
   };
 
   // 统一目标日期：收敛非法日期并自动补上星期，不依赖任何写死的对照表
   CP.normalizeTarget = function (t, y) {
     if (!t) return null;
-    var year = y || new Date().getFullYear();
+    var year = Math.round(Number(t.y || y || new Date().getFullYear()));
+    if (!isFinite(year) || year < 1) year = new Date().getFullYear();
     var m = Math.round(Number(t.m));
     var d = Math.round(Number(t.d));
     if (!isFinite(m) || !isFinite(d)) return null;
     m = Math.min(12, Math.max(1, m));
     d = Math.min(CP.daysInMonth(m, year), Math.max(1, d));
-    return { m: m, d: d, w: CP.weekdayOf(m, d, year) };
+    return { y: year, m: m, d: d, w: CP.weekdayOf(m, d, year) };
   };
 
   CP.isSameTarget = function (a, b) {
-    return !!a && !!b && a.m === b.m && a.d === b.d && a.w === b.w;
+    return !!a && !!b && a.m === b.m && a.d === b.d && a.w === b.w &&
+      Number(a.y || 0) === Number(b.y || 0);
   };
 })(window);
 
@@ -2507,7 +2505,7 @@ a.btn:focus-visible {
     this.stats = this.data.stats || CP.Storage.defaultStats();
 
     var today = CP.todayTarget();
-    this.target = { m: today.m, d: today.d, w: today.w };
+    this.target = { y: today.y, m: today.m, d: today.d, w: today.w };
     this.playDayKey = today.key;
 
     this.placements = [];
@@ -2579,15 +2577,15 @@ a.btn:focus-visible {
       this.targetInfo = {};
       this.targetInfo[mi] = {
         kind: 'month', value: this.target.m, sub: '月份', main: this.target.m + '月',
-        aria: '月份 ' + this.target.m + '月', title: '点击切换到 ' + this.target.m + '月'
+        aria: '月份 ' + this.target.m + '月', title: '月份 ' + this.target.m + '月'
       };
       this.targetInfo[di] = {
         kind: 'day', value: this.target.d, sub: '日期', main: this.target.d + '日',
-        aria: '日期 ' + this.target.d + '日', title: '点击切换到 ' + this.target.d + '日'
+        aria: '日期 ' + this.target.d + '日', title: '日期 ' + this.target.d + '日'
       };
       this.targetInfo[wi2] = {
         kind: 'week', value: this.target.w, sub: '星期', main: '周' + weekCell.label,
-        aria: '星期' + weekCell.label, title: '点击切换到最近的 周' + weekCell.label
+        aria: '星期' + weekCell.label, title: '星期' + weekCell.label
       };
     },
 
@@ -2597,16 +2595,17 @@ a.btn:focus-visible {
 
     isValidTarget: function (t) {
       if (!t) return false;
-      var y = new Date().getFullYear();
+      var y = Number(t.y) || new Date().getFullYear();
       var m = Number(t.m);
       var d = Number(t.d);
-      return Number.isInteger(m) && m >= 1 && m <= 12 &&
+      return y >= 1 && Number.isInteger(m) && m >= 1 && m <= 12 &&
         Number.isInteger(d) && d >= 1 && d <= CP.daysInMonth(m, y);
     },
 
     isTodayChallenge: function () {
       var now = new Date();
-      return this.target.m === now.getMonth() + 1 &&
+      return this.target.y === now.getFullYear() &&
+        this.target.m === now.getMonth() + 1 &&
         this.target.d === now.getDate() &&
         this.target.w === now.getDay();
     },
@@ -2614,7 +2613,8 @@ a.btn:focus-visible {
     // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
     checkDayRollover: function (notify) {
       var today = CP.todayTarget();
-      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) {
+      if (this.target.y === today.y && this.target.m === today.m &&
+        this.target.d === today.d && this.target.w === today.w) {
         this.refreshTodayMarks();
         return false;
       }
@@ -2733,7 +2733,7 @@ a.btn:focus-visible {
     startNew: function (target, opts) {
       opts = opts || {};
       var t = CP.normalizeTarget(target) || CP.todayTarget();
-      this.target = { m: t.m, d: t.d, w: t.w };
+      this.target = { y: t.y, m: t.m, d: t.d, w: t.w };
       this.playDayKey = CP.dateKey(new Date());
       this.placements = [];
       this.pieceStates = [];
@@ -2830,8 +2830,8 @@ a.btn:focus-visible {
       this.applyBoardRoles({ animate: false });
     },
 
-    // 按当前目标日期刷新每一格的角色：三个目标格直接显示月/日/周，
-    // 其余格继续保持标签常显，位置与含义一一对应。
+    // 所有非墙格永远用同一套标签：月份 3月 / 日期 15日 / 星期 周一
+    // 位置、字号、颜色层级完全一致，只有选中态由格子的底色与描边体现。
     applyBoardRoles: function (opts) {
       opts = opts || {};
       var changed = [];
@@ -2842,43 +2842,30 @@ a.btn:focus-visible {
         var wasTarget = el.classList.contains('target');
         var info = this.targetInfo[idx];
         var meta = CP.CELL_META[idx];
+        if (!meta) continue;
 
         el.classList.remove('target', 'empty', 'month', 'day', 'week', 'today-cell', 'target-flash', 'target-in');
         el.innerHTML = '';
+        el.dataset.kind = meta.kind;
+        el.dataset.value = String(meta.value);
+        el.setAttribute('role', 'gridcell');
+        el.removeAttribute('aria-hidden');
 
         if (info) {
           el.classList.add('target', info.kind);
-          el.dataset.kind = info.kind;
-          el.dataset.value = String(info.value);
-          el.setAttribute('role', 'gridcell');
           el.setAttribute('aria-label', info.aria);
           el.title = info.title;
-          el.removeAttribute('aria-hidden');
-          var sub = document.createElement('span');
-          sub.className = 'cell-sub';
-          sub.textContent = info.sub;
-          var main = document.createElement('span');
-          main.className = 'cell-main';
-          main.textContent = info.main;
-          el.appendChild(sub);
-          el.appendChild(main);
-          if (this.labelEls[idx]) {
-            if (this.labelEls[idx].parentNode) this.labelEls[idx].parentNode.removeChild(this.labelEls[idx]);
-            this.labelEls[idx] = null;
-          }
           if (!wasTarget) changed.push(el);
         } else {
           el.classList.add('empty');
-          if (meta) {
-            el.dataset.kind = meta.kind;
-            el.dataset.value = String(meta.value);
-            el.setAttribute('role', 'gridcell');
-            el.setAttribute('aria-label', meta.aria);
-            el.title = meta.title;
-            el.removeAttribute('aria-hidden');
-            if (!this.labelEls[idx]) this.addLabel(idx, meta.kind, meta.label, !opts.animate);
-          }
+          el.setAttribute('aria-label', meta.aria);
+          el.title = meta.title;
         }
+
+        var label = this.labelEls[idx];
+        if (!label) label = this.addLabel(idx, meta.kind, meta.label);
+        label.textContent = meta.label;
+        label.className = 'cell-label ' + meta.kind + (info ? ' target' : '');
       }
 
       if (opts.animate) {
@@ -2891,9 +2878,9 @@ a.btn:focus-visible {
       this.refreshTodayMarks();
     },
 
-    addLabel: function (idx, kind, text, instant) {
+    addLabel: function (idx, kind, text) {
       var el = document.createElement('span');
-      el.className = 'cell-label ' + kind + (instant ? '' : ' label-shift');
+      el.className = 'cell-label ' + kind;
       el.style.gridRow = String(CP.rowOf(idx) + 1);
       el.style.gridColumn = String(CP.colOf(idx) + 1);
       el.dataset.idx = String(idx);
@@ -2903,7 +2890,7 @@ a.btn:focus-visible {
       return el;
     },
 
-    // 今日三格始终鲜明：目标格用自身高亮块，非目标格在标签层加描边与「今」角标
+    // 今天的三个格统一用一个强调角标标出 选中态则统一用底色与描边
     refreshTodayMarks: function () {
       var today = CP.todayTarget();
       var todayCells = CP.targetCells(today.m, today.d, today.w) || [];
@@ -2920,54 +2907,196 @@ a.btn:focus-visible {
       for (var idx = 0; idx < 56; idx++) {
         var label = this.labelEls[idx];
         if (!label) continue;
-        label.classList.toggle('today-other', !!todaySet[idx]);
+        label.classList.toggle('is-today', !!todaySet[idx]);
       }
     },
 
     // 把一块拼图画成完整剪影：相邻格互相补缝，只在真正的轮廓上做圆角
-    shapeLayer: function (piece, flip, rot, r, c, opts) {
-      opts = opts || {};
-      var def = CP.PIECE_DEFS[piece];
-      var cells = CP.transformCells(def.cells, flip, rot);
+    // 把一组小格合成一条平滑轮廓：外角与凹角都统一倒圆，内部没有任何分格线
+    buildShapeSvg: function (cells, opts) {
+      var cw = opts.cellW;
+      var ch = opts.cellH;
+      var gap = opts.gap;
+      var radius = opts.radius;
       var map = {};
-      var maxR = 0, maxC = 0;
-      for (var i = 0; i < cells.length; i++) {
+      var maxR = 0;
+      var maxC = 0;
+      var i;
+      for (i = 0; i < cells.length; i++) {
         map[cells[i][0] + ',' + cells[i][1]] = 1;
         if (cells[i][0] > maxR) maxR = cells[i][0];
         if (cells[i][1] > maxC) maxC = cells[i][1];
       }
-      var w = maxC + 1, h = maxR + 1;
+      var w = maxC + 1;
+      var h = maxR + 1;
+      var width = w * cw + (w - 1) * gap;
+      var height = h * ch + (h - 1) * gap;
+
+      var xs = [];
+      var ys = [];
+      var xSet = {};
+      var ySet = {};
+      var rects = [];
+      function putX(v) { if (!xSet[v]) { xSet[v] = 1; xs.push(v); } }
+      function putY(v) { if (!ySet[v]) { ySet[v] = 1; ys.push(v); } }
+
+      for (i = 0; i < cells.length; i++) {
+        var lr = cells[i][0];
+        var lc = cells[i][1];
+        var right = map[lr + ',' + (lc + 1)];
+        var down = map[(lr + 1) + ',' + lc];
+        var x0 = lc * (cw + gap);
+        var y0 = lr * (ch + gap);
+        var x1 = x0 + cw + (right ? gap : 0);
+        var y1 = y0 + ch + (down ? gap : 0);
+        rects.push([x0, y0, x1, y1]);
+        putX(x0); putX(x1); putY(y0); putY(y1);
+      }
+      xs.sort(function (a, b) { return a - b; });
+      ys.sort(function (a, b) { return a - b; });
+
+      var xiOf = {};
+      var yiOf = {};
+      for (i = 0; i < xs.length; i++) xiOf[xs[i]] = i;
+      for (i = 0; i < ys.length; i++) yiOf[ys[i]] = i;
+      var nx = xs.length - 1;
+      var ny = ys.length - 1;
+      var filled = [];
+      for (i = 0; i < nx; i++) {
+        filled[i] = [];
+        for (var j = 0; j < ny; j++) filled[i][j] = false;
+      }
+      for (i = 0; i < rects.length; i++) {
+        var rct = rects[i];
+        for (var xi = xiOf[rct[0]]; xi < xiOf[rct[2]]; xi++) {
+          for (var yi = yiOf[rct[1]]; yi < yiOf[rct[3]]; yi++) filled[xi][yi] = true;
+        }
+      }
+
+      // 收集并抵消内部边，只留外轮廓
+      var edges = {};
+      function addEdge(ax, ay, bx, by) {
+        var key = ax + ',' + ay + '>' + bx + ',' + by;
+        var rev = bx + ',' + by + '>' + ax + ',' + ay;
+        if (edges[rev]) delete edges[rev];
+        else edges[key] = [ax, ay, bx, by];
+      }
+      for (i = 0; i < nx; i++) {
+        for (var jj = 0; jj < ny; jj++) {
+          if (!filled[i][jj]) continue;
+          addEdge(i, jj, i + 1, jj);
+          addEdge(i + 1, jj, i + 1, jj + 1);
+          addEdge(i + 1, jj + 1, i, jj + 1);
+          addEdge(i, jj + 1, i, jj);
+        }
+      }
+
+      var keys = Object.keys(edges);
+      var loops = [];
+      while (keys.length) {
+        var startKey = keys.shift();
+        var seg = edges[startKey];
+        if (!seg) continue;
+        delete edges[startKey];
+        var loop = [[seg[0], seg[1]]];
+        var cur = seg;
+        var guard = 0;
+        while (guard++ < 300) {
+          loop.push([cur[2], cur[3]]);
+          if (cur[2] === seg[0] && cur[3] === seg[1]) break;
+          var nextKey = null;
+          for (var q = 0; q < keys.length; q++) {
+            var s = edges[keys[q]];
+            if (s && s[0] === cur[2] && s[1] === cur[3]) { nextKey = keys[q]; break; }
+          }
+          if (!nextKey) break;
+          cur = edges[nextKey];
+          delete edges[nextKey];
+        }
+        if (loop.length > 2 && loop[loop.length - 1][0] === loop[0][0] && loop[loop.length - 1][1] === loop[0][1]) {
+          loop.pop();
+        }
+        if (loop.length >= 4) loops.push(loop);
+      }
+
+      function fmt(n) { return Math.round(n * 100) / 100; }
+      function dist(ax, ay, bx, by) {
+        var dx = bx - ax;
+        var dy = by - ay;
+        return Math.sqrt(dx * dx + dy * dy);
+      }
+      function roundedPath(nodes) {
+        var pts = nodes.map(function (n) { return [xs[n[0]], ys[n[1]]]; });
+        var count = pts.length;
+        var d = '';
+        for (var p = 0; p < count; p++) {
+          var v = pts[p];
+          var prev = pts[(p - 1 + count) % count];
+          var next = pts[(p + 1) % count];
+          var inLen = dist(prev[0], prev[1], v[0], v[1]);
+          var outLen = dist(v[0], v[1], next[0], next[1]);
+          if (inLen < 1e-6 || outLen < 1e-6) continue;
+          var cross = (v[0] - prev[0]) * (next[1] - v[1]) - (v[1] - prev[1]) * (next[0] - v[0]);
+          if (Math.abs(cross) < 1e-6) {
+            var line = (d ? ' L ' : 'M ') + fmt(v[0]) + ' ' + fmt(v[1]);
+            d += line;
+            continue;
+          }
+          var r = Math.min(radius, inLen / 2, outLen / 2);
+          var inX = v[0] + (prev[0] - v[0]) / inLen * r;
+          var inY = v[1] + (prev[1] - v[1]) / inLen * r;
+          var outX = v[0] + (next[0] - v[0]) / outLen * r;
+          var outY = v[1] + (next[1] - v[1]) / outLen * r;
+          d += (d ? ' L ' : 'M ') + fmt(inX) + ' ' + fmt(inY);
+          d += ' Q ' + fmt(v[0]) + ' ' + fmt(v[1]) + ' ' + fmt(outX) + ' ' + fmt(outY);
+        }
+        return d + ' Z';
+      }
+
+      var svgNS = 'http://www.w3.org/2000/svg';
+      var svg = document.createElementNS(svgNS, 'svg');
+      svg.setAttribute('class', 'piece-svg');
+      svg.setAttribute('width', String(Math.round(width * 100) / 100));
+      svg.setAttribute('height', String(Math.round(height * 100) / 100));
+      svg.setAttribute('viewBox', '0 0 ' + fmt(width) + ' ' + fmt(height));
+      for (i = 0; i < loops.length; i++) {
+        var path = document.createElementNS(svgNS, 'path');
+        path.setAttribute('d', roundedPath(loops[i]));
+        path.setAttribute('fill', opts.color);
+        if (opts.stroke !== false) {
+          path.setAttribute('stroke', opts.stroke || 'rgba(28, 20, 12, 0.22)');
+          path.setAttribute('stroke-width', '1');
+          path.setAttribute('stroke-linejoin', 'round');
+        }
+        svg.appendChild(path);
+      }
+      return { svg: svg, width: width, height: height, w: w, h: h };
+    },
+
+    pieceRadius: function () {
+      var r = parseFloat(getComputedStyle(this.board).getPropertyValue('--piece-r'));
+      return isFinite(r) && r > 0 ? r : 7;
+    },
+
+    shapeLayer: function (piece, flip, rot, r, c, opts) {
+      opts = opts || {};
+      var def = CP.PIECE_DEFS[piece];
+      var cells = CP.transformCells(def.cells, flip, rot);
+      var m = this.measureBoard();
+      var radius = this.pieceRadius();
+      var color = opts.color || def.color;
+      var built = this.buildShapeSvg(cells, {
+        cellW: m.cellW, cellH: m.cellH, gap: m.gap, radius: radius, color: color
+      });
 
       var layer = document.createElement('div');
       layer.className = 'piece' + (opts.className ? ' ' + opts.className : '');
-      layer.style.width = 'calc(var(--cell) * ' + w + ' + var(--gap) * ' + (w - 1) + ')';
-      layer.style.height = 'calc(var(--cell) * ' + h + ' + var(--gap) * ' + (h - 1) + ')';
-      layer.style.left = 'calc(var(--cell) * ' + c + ' + var(--gap) * ' + c + ')';
-      layer.style.top = 'calc(var(--cell) * ' + r + ' + var(--gap) * ' + r + ')';
-      layer.style.setProperty('--piece-color', def.color);
-
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var sub = document.createElement('span');
-        sub.className = 'piece-cell';
-        sub.style.left = 'calc(var(--cell) * ' + lc + ' + var(--gap) * ' + lc + ')';
-        sub.style.top = 'calc(var(--cell) * ' + lr + ' + var(--gap) * ' + lr + ')';
-        sub.style.width = right ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
-        sub.style.height = down ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
-        sub.style.borderRadius = [
-          (!up && !left) ? 'var(--piece-r)' : '0',
-          (!up && !right) ? 'var(--piece-r)' : '0',
-          (!down && !right) ? 'var(--piece-r)' : '0',
-          (!down && !left) ? 'var(--piece-r)' : '0'
-        ].join(' ');
-        sub.style.background = opts.color || def.color;
-        layer.appendChild(sub);
-      }
+      layer.style.width = built.width + 'px';
+      layer.style.height = built.height + 'px';
+      layer.style.left = (c * m.pitchX) + 'px';
+      layer.style.top = (r * m.pitchY) + 'px';
+      layer.style.setProperty('--piece-color', color);
+      layer.appendChild(built.svg);
       return layer;
     },
 
@@ -3043,6 +3172,16 @@ a.btn:focus-visible {
       // 长时间挂在后台或一直开着时 每分钟检查是否跨天
       setInterval(function () { self.checkDayRollover(); }, 60000);
 
+      // 拼块轮廓按实测像素绘制 窗口尺寸变化后按新尺寸重新铺一遍
+      var resizeTimer = null;
+      global.addEventListener('resize', function () {
+        clearTimeout(resizeTimer);
+        resizeTimer = setTimeout(function () {
+          self.renderBoardState();
+          self.renderTray();
+        }, 160);
+      });
+
       var backToday = $('btnBackToday');
       if (backToday) {
         backToday.addEventListener('click', function () {
@@ -3069,12 +3208,20 @@ a.btn:focus-visible {
 
     renderChallenge: function () {
       var week = CP.WEEK_CELLS[this.target.w];
+      var thisYear = new Date().getFullYear();
+      var yearDiff = this.target.y !== thisYear;
       var title = this.target.m + '月' + this.target.d + '日 星期' + week.label;
       if (this.titleEl.textContent !== title) {
         this.titleEl.textContent = title;
         this.titleEl.classList.remove('swap');
         void this.titleEl.offsetWidth;
         this.titleEl.classList.add('swap');
+      }
+      var yearEl = $('challengeYear');
+      if (yearEl) {
+        var yearText = yearDiff ? this.target.y + '年' : '';
+        if (yearEl.textContent !== yearText) yearEl.textContent = yearText;
+        yearEl.hidden = !yearDiff;
       }
       var daily = this.isTodayChallenge();
       var tag = this.won ? (daily ? '今日已完成' : '已完成') : (daily ? '今日挑战' : '自由模式');
@@ -3088,7 +3235,7 @@ a.btn:focus-visible {
       this.tagEl.classList.toggle('free', !daily && !this.won);
       var backToday = $('btnBackToday');
       if (backToday) backToday.hidden = daily;
-      this.board.setAttribute('aria-label', '日历拼图棋盘 ' + title + ' 点月份 日期 或星期格可换日期');
+      this.board.setAttribute('aria-label', '日历拼图棋盘 ' + (yearDiff ? this.target.y + '年' : '') + title);
     },
 
     renderBoardState: function () {
@@ -3108,10 +3255,13 @@ a.btn:focus-visible {
 
       var shown = this.answerMode ? (this.answers[this.answerIdx] || []) : this.placements;
       var prevSet = this.prevPieceSet || {};
+      var covered = new Uint8Array(56);
       this.shownPieceSet = {};
 
       for (i = 0; i < shown.length; i++) {
         var pl = shown[i];
+        var plCells = this.cellsOfPlacement(pl);
+        for (var ci = 0; ci < plCells.length; ci++) covered[plCells[ci]] = 1;
         var layer = this.shapeLayer(pl.piece, pl.flip, pl.rot, pl.r, pl.c, {
           className: this.answerMode ? 'answer-piece' : ''
         });
@@ -3143,6 +3293,10 @@ a.btn:focus-visible {
         this.piecesLayer.appendChild(hintLayer);
       }
 
+      for (i = 0; i < 56; i++) {
+        if (this.labelEls[i]) this.labelEls[i].classList.toggle('covered', !!covered[i]);
+      }
+
       if (!this.answerMode && this.preview && this.preview.cells) {
         for (i = 0; i < this.preview.cells.length; i++) {
           var pc = this.cellEls[this.preview.cells[i]];
@@ -3166,43 +3320,26 @@ a.btn:focus-visible {
       }
     },
 
+    miniMetrics: function () {
+      var cs = getComputedStyle(this.tray);
+      var cell = parseFloat(cs.getPropertyValue('--mini')) || 15;
+      var radius = parseFloat(cs.getPropertyValue('--mini-r')) || 3;
+      return { cell: cell, gap: 2, radius: radius };
+    },
+
     buildMini: function (btn, piece) {
       var mini = btn.querySelector('.mini');
       var state = this.pieceStates[piece];
       var cells = CP.transformCells(CP.PIECE_DEFS[piece].cells, state.flip, state.rot);
-      var map = {};
-      var maxR = 0, maxC = 0;
-      for (var i = 0; i < cells.length; i++) {
-        map[cells[i][0] + ',' + cells[i][1]] = 1;
-        if (cells[i][0] > maxR) maxR = cells[i][0];
-        if (cells[i][1] > maxC) maxC = cells[i][1];
-      }
-      var w = maxC + 1, h = maxR + 1;
+      var mm = this.miniMetrics();
+      var built = this.buildShapeSvg(cells, {
+        cellW: mm.cell, cellH: mm.cell, gap: mm.gap, radius: mm.radius,
+        color: CP.PIECE_DEFS[piece].color, stroke: false
+      });
       mini.innerHTML = '';
-      mini.style.width = 'calc(var(--mini) * ' + w + ' + ' + ((w - 1) * 2) + 'px)';
-      mini.style.height = 'calc(var(--mini) * ' + h + ' + ' + ((h - 1) * 2) + 'px)';
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var dot = document.createElement('span');
-        dot.className = 'mini-cell';
-        dot.style.left = 'calc(var(--mini) * ' + lc + ' + ' + (lc * 2) + 'px)';
-        dot.style.top = 'calc(var(--mini) * ' + lr + ' + ' + (lr * 2) + 'px)';
-        dot.style.width = right ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
-        dot.style.height = down ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
-        dot.style.borderRadius = [
-          (!up && !left) ? 'var(--mini-r)' : '0',
-          (!up && !right) ? 'var(--mini-r)' : '0',
-          (!down && !right) ? 'var(--mini-r)' : '0',
-          (!down && !left) ? 'var(--mini-r)' : '0'
-        ].join(' ');
-        dot.style.backgroundColor = CP.PIECE_DEFS[piece].color;
-        mini.appendChild(dot);
-      }
+      mini.style.width = built.width + 'px';
+      mini.style.height = built.height + 'px';
+      mini.appendChild(built.svg);
     },
 
     setMetric: function (el, value) {
@@ -3538,7 +3675,7 @@ a.btn:focus-visible {
       if (!d.moved) {
         var wasSelected = d.wasSelected;
         this.endDrag();
-        // 再点一下已选拼块即可取消选择 回到点日期格换日期的状态
+        // 再点一下已选拼块即可取消选择 换日期请用顶部日期按钮
         if (wasSelected) {
           this.selected = null;
           this.renderTray();
@@ -3607,35 +3744,15 @@ a.btn:focus-visible {
       d.bw = maxC + 1;
       d.bh = maxR + 1;
 
-      var radius = Math.max(4, Math.min(10, Math.round(m.cellW * 0.17)));
-      var color = CP.PIECE_DEFS[d.piece].color;
+      var built = this.buildShapeSvg(cells, {
+        cellW: m.cellW, cellH: m.cellH, gap: m.gap, radius: this.pieceRadius(),
+        color: CP.PIECE_DEFS[d.piece].color
+      });
 
       this.ghost.innerHTML = '';
-      this.ghost.style.width = (d.bw * m.cellW + (d.bw - 1) * m.gap) + 'px';
-      this.ghost.style.height = (d.bh * m.cellH + (d.bh - 1) * m.gap) + 'px';
-
-      for (var k = 0; k < cells.length; k++) {
-        var lr = cells[k][0], lc = cells[k][1];
-        var up = map[(lr - 1) + ',' + lc];
-        var down = map[(lr + 1) + ',' + lc];
-        var left = map[lr + ',' + (lc - 1)];
-        var right = map[lr + ',' + (lc + 1)];
-
-        var dot = document.createElement('span');
-        dot.className = 'ghost-cell';
-        dot.style.left = (lc * (m.cellW + m.gap)) + 'px';
-        dot.style.top = (lr * (m.cellH + m.gap)) + 'px';
-        dot.style.width = (right ? m.cellW + m.gap : m.cellW) + 'px';
-        dot.style.height = (down ? m.cellH + m.gap : m.cellH) + 'px';
-        dot.style.borderRadius = [
-          (!up && !left) ? radius + 'px' : '0',
-          (!up && !right) ? radius + 'px' : '0',
-          (!down && !right) ? radius + 'px' : '0',
-          (!down && !left) ? radius + 'px' : '0'
-        ].join(' ');
-        dot.style.backgroundColor = color;
-        this.ghost.appendChild(dot);
-      }
+      this.ghost.style.width = built.width + 'px';
+      this.ghost.style.height = built.height + 'px';
+      this.ghost.appendChild(built.svg);
       this.ghost.classList.add('show');
     },
 
@@ -3698,17 +3815,11 @@ a.btn:focus-visible {
       if (label) cell = this.cellEls[Number(label.dataset.idx)];
       if (!cell) return;
       var idx = Number(cell.dataset.idx);
-      var kind = cell.dataset.kind;
-      var value = Number(cell.dataset.value);
 
-      // 目标格不能放拼块；没有选中拼块时，点它直接换到对应的日期
+      // 目标格不能放拼块，换日期走顶部日期按钮
       if (this.blocked[idx]) {
-        if (this.selected !== null) {
-          this.toast('目标格不能放拼块 再点一下已选拼块可取消选择');
-          this.shakeBoard();
-          return;
-        }
-        if (kind) this.switchDateFromCell(kind, value, cell);
+        this.toast('目标格不能放拼块 换日期请用上方日期按钮');
+        if (this.selected !== null) this.shakeBoard();
         return;
       }
 
@@ -3717,66 +3828,19 @@ a.btn:focus-visible {
         this.removePiece(occ);
         return;
       }
-      if (this.selected !== null) {
-        var anchor = this.findTapAnchor(this.selected, idx);
-        if (!anchor) {
-          this.toast('这个位置放不下 换个格子');
-          this.shakeBoard();
-          return;
-        }
-        var state = this.pieceStates[this.selected];
-        this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
+      if (this.selected === null) {
+        this.toast('先在下方选一块拼块 换日期请用上方日期按钮');
+        this.shakeBoard();
         return;
       }
-      // 没有选中拼块时，月 / 日 / 星期格都可以直接切换日期
-      if (kind) {
-        this.switchDateFromCell(kind, value, cell);
+      var anchor = this.findTapAnchor(this.selected, idx);
+      if (!anchor) {
+        this.toast('这个位置放不下 换个格子');
+        this.shakeBoard();
         return;
       }
-      this.toast('先在下方选一块拼块');
-      this.shakeBoard();
-    },
-
-    // 星期格落在当前月份里与该星期最接近的那一天
-    pickDateForWeekday: function (week) {
-      var year = new Date().getFullYear();
-      var maxDay = CP.daysInMonth(this.target.m, year);
-      var best = this.target.d;
-      var bestDist = Infinity;
-      for (var d = 1; d <= maxDay; d++) {
-        if (CP.weekdayOf(this.target.m, d, year) !== week) continue;
-        var dist = Math.abs(d - this.target.d);
-        if (dist < bestDist) { bestDist = dist; best = d; }
-      }
-      return best;
-    },
-
-    weekName: function (w) {
-      return '星期' + CP.WEEK_CELLS[w].label;
-    },
-
-    switchDateFromCell: function (kind, value, cell) {
-      if (this.won || this.answerMode) return;
-      var year = new Date().getFullYear();
-      var next = null;
-      if (kind === 'month') next = CP.normalizeTarget({ m: value, d: this.target.d }, year);
-      else if (kind === 'day') next = CP.normalizeTarget({ m: this.target.m, d: value }, year);
-      else if (kind === 'week') next = CP.normalizeTarget({ m: this.target.m, d: this.pickDateForWeekday(value) }, year);
-      if (!next) return;
-
-      if (cell) {
-        cell.classList.remove('cell-tap');
-        void cell.offsetWidth;
-        cell.classList.add('cell-tap');
-      }
-
-      if (CP.isSameTarget(next, this.target)) {
-        this.flashTargets();
-        this.toast('已经是 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
-        return;
-      }
-      this.startNew(next, { flash: true });
-      this.toast('已切换到 ' + next.m + '月' + next.d + '日 ' + this.weekName(next.w));
+      var state = this.pieceStates[this.selected];
+      this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
     },
 
     flashTargets: function () {
@@ -3959,7 +4023,7 @@ a.btn:focus-visible {
         counted: false,
         streak: 0,
         isRecord: false,
-        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        target: { y: this.target.y, m: this.target.m, d: this.target.d, w: this.target.w },
         revealed: this.revealed
       };
 
@@ -4022,7 +4086,7 @@ a.btn:focus-visible {
       if (!this.target) return;
       this.data.stats = this.stats;
       this.data.current = {
-        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        target: { y: this.target.y, m: this.target.m, d: this.target.d, w: this.target.w },
         playDay: this.playDayKey,
         placements: copyList(this.placements),
         pieceStates: this.pieceStates.map(function (s) { return { flip: s.flip, rot: s.rot }; }),
@@ -4069,7 +4133,7 @@ a.btn:focus-visible {
   function $(id) { return document.getElementById(id); }
 
   var game = null;
-  var dateSel = { m: 1, d: 1, w: 0 };
+  var dateSel = CP.normalizeTarget(CP.todayTarget());
   var lastFocus = null;
   var deferredPrompt = null;
 
@@ -4107,7 +4171,7 @@ a.btn:focus-visible {
   }
 
   // ---------- 日期选择 ----------
-  // 星期不开放选择，一律按年月日现算
+  // 年 月 日都可选，星期一律按所选年月日现算
   function currentYear() { return new Date().getFullYear(); }
 
   function buildDateChips() {
@@ -4148,8 +4212,11 @@ a.btn:focus-visible {
   }
 
   function updateDateUI() {
-    dateSel = CP.normalizeTarget(dateSel);
-    var maxDay = CP.daysInMonth(dateSel.m, currentYear());
+    dateSel = CP.normalizeTarget(dateSel) || CP.todayTarget();
+    var maxDay = CP.daysInMonth(dateSel.m, dateSel.y);
+
+    var yearInput = $('yearInput');
+    if (yearInput && document.activeElement !== yearInput) yearInput.value = String(dateSel.y);
 
     var monthChips = $('monthGrid').querySelectorAll('.chip');
     for (var i = 0; i < monthChips.length; i++) {
@@ -4165,20 +4232,44 @@ a.btn:focus-visible {
       dayChips[j].classList.toggle('on', v === dateSel.d);
     }
 
-    $('datePreview').textContent = dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
+    $('datePreview').textContent = dateSel.y + '年' + dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
     var warning = $('dateWarning');
     var hasProgress = game && (game.placements.length > 0 || game.answerMode);
     warning.hidden = !hasProgress;
   }
 
+  function setYear(y) {
+    var next = Math.round(Number(y));
+    if (!isFinite(next)) return;
+    next = Math.max(1, Math.min(9999, next));
+    dateSel = CP.normalizeTarget({ y: next, m: dateSel.m, d: dateSel.d });
+    updateDateUI();
+  }
+
+  function bindYearControls() {
+    var input = $('yearInput');
+    if (!input) return;
+    $('yearPrev').addEventListener('click', function () { setYear(dateSel.y - 1); });
+    $('yearNext').addEventListener('click', function () { setYear(dateSel.y + 1); });
+    input.addEventListener('change', function () { setYear(input.value); });
+    input.addEventListener('blur', function () { input.value = String(dateSel.y); });
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter') {
+        e.preventDefault();
+        setYear(input.value);
+        input.blur();
+      }
+    });
+  }
+
   function openDateModal() {
-    dateSel = CP.normalizeTarget({ m: game.target.m, d: game.target.d }) || CP.todayTarget();
+    dateSel = CP.normalizeTarget({ y: game.target.y, m: game.target.m, d: game.target.d }) || CP.todayTarget();
     updateDateUI();
     openModal($('dateModal'));
   }
 
   function applyDate() {
-    var target = CP.normalizeTarget({ m: dateSel.m, d: dateSel.d });
+    var target = CP.normalizeTarget({ y: dateSel.y, m: dateSel.m, d: dateSel.d });
     if (!target) return;
     var same = CP.isSameTarget(target, game.target) && !game.won && !game.answerMode;
     closeModal($('dateModal'));
@@ -4186,8 +4277,9 @@ a.btn:focus-visible {
       game.toast('已经是这一局了');
       return;
     }
-    game.startNew(target);
-    game.toast('已开始 ' + target.m + '月' + target.d + '日 ' + weekName(target.w));
+    game.startNew(target, { flash: true });
+    var yPrefix = target.y === currentYear() ? '' : target.y + '年';
+    game.toast('已开始 ' + yPrefix + target.m + '月' + target.d + '日 ' + weekName(target.w));
   }
 
   // ---------- 统计 ----------
@@ -4269,7 +4361,8 @@ a.btn:focus-visible {
   // ---------- 胜利 ----------
   function showWin(info) {
     var week = CP.WEEK_CELLS[info.target.w];
-    $('winSub').textContent = info.target.m + '月' + info.target.d + '日 星期' + week.label;
+    var yPrefix = info.target.y === currentYear() ? '' : info.target.y + '年';
+    $('winSub').textContent = yPrefix + info.target.m + '月' + info.target.d + '日 星期' + week.label;
     $('winTime').textContent = CP.Storage.formatDuration(info.ms);
     $('winMoves').textContent = String(info.moves);
     $('winHints').textContent = String(info.hints);
@@ -4449,6 +4542,7 @@ a.btn:focus-visible {
     window.game = game;
 
     buildDateChips();
+    bindYearControls();
 
     $('btnDate').addEventListener('click', openDateModal);
     $('btnStats').addEventListener('click', openStats);
@@ -4460,10 +4554,9 @@ a.btn:focus-visible {
       updateDateUI();
     });
     $('btnRandom').addEventListener('click', function () {
-      var year = currentYear();
       var m = Math.floor(Math.random() * 12) + 1;
-      var d = Math.floor(Math.random() * CP.daysInMonth(m, year)) + 1;
-      dateSel = CP.normalizeTarget({ m: m, d: d });
+      var d = Math.floor(Math.random() * CP.daysInMonth(m, dateSel.y)) + 1;
+      dateSel = CP.normalizeTarget({ y: dateSel.y, m: m, d: d });
       updateDateUI();
     });
 

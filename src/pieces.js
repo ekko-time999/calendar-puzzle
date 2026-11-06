@@ -62,7 +62,7 @@
         value: value,
         label: label,
         aria: (kind === 'month' ? '月份 ' : kind === 'day' ? '日期 ' : '星期 ') + label,
-        title: '点击切换到 ' + label
+        title: (kind === 'month' ? '月份 ' : kind === 'day' ? '日期 ' : '星期 ') + label
       };
     }
     for (var m = 1; m <= 12; m++) {
@@ -133,6 +133,7 @@
 
   CP.targetForDate = function (date) {
     return {
+      y: date.getFullYear(),
       m: date.getMonth() + 1,
       d: date.getDate(),
       w: date.getDay(),
@@ -144,29 +145,38 @@
     return CP.targetForDate(new Date());
   };
 
-  // 某年某月共有多少天，闰年的 2 月会自动得到 29 天
+  // 某年某月共有多少天，闰年规则完整覆盖任意年份
   CP.daysInMonth = function (m, y) {
-    return new Date(y || new Date().getFullYear(), m, 0).getDate();
+    var year = Number(y) || new Date().getFullYear();
+    if (m === 2) {
+      return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 29 : 28;
+    }
+    return [31, 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][m - 1] || 31;
   };
 
-  // 星期完全由年月日算出，与 Date.getDay() 一致：0 = 周日
+  // 星期完全由年月日算出，用 setFullYear 保证 1–99 年也按真实年份计算
   CP.weekdayOf = function (m, d, y) {
-    return new Date(y || new Date().getFullYear(), m - 1, d).getDay();
+    var year = Number(y) || new Date().getFullYear();
+    var dt = new Date(2000, 0, 1, 12, 0, 0);
+    dt.setFullYear(year, m - 1, d);
+    return dt.getDay();
   };
 
   // 统一目标日期：收敛非法日期并自动补上星期，不依赖任何写死的对照表
   CP.normalizeTarget = function (t, y) {
     if (!t) return null;
-    var year = y || new Date().getFullYear();
+    var year = Math.round(Number(t.y || y || new Date().getFullYear()));
+    if (!isFinite(year) || year < 1) year = new Date().getFullYear();
     var m = Math.round(Number(t.m));
     var d = Math.round(Number(t.d));
     if (!isFinite(m) || !isFinite(d)) return null;
     m = Math.min(12, Math.max(1, m));
     d = Math.min(CP.daysInMonth(m, year), Math.max(1, d));
-    return { m: m, d: d, w: CP.weekdayOf(m, d, year) };
+    return { y: year, m: m, d: d, w: CP.weekdayOf(m, d, year) };
   };
 
   CP.isSameTarget = function (a, b) {
-    return !!a && !!b && a.m === b.m && a.d === b.d && a.w === b.w;
+    return !!a && !!b && a.m === b.m && a.d === b.d && a.w === b.w &&
+      Number(a.y || 0) === Number(b.y || 0);
   };
 })(window);

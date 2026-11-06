@@ -25,6 +25,8 @@
     <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 3.4"/><path d="M12 17h.01"/></symbol>
     <symbol id="i-install" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
     <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-minus" viewBox="0 0 24 24"><path d="M5 12h14"/></symbol>
+    <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
     <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
   </svg>
 
@@ -58,6 +60,7 @@
         <div class="challenge-left">
           <div class="challenge-head">
             <span id="challengeTag" class="challenge-tag">今日挑战</span>
+            <span id="challengeYear" class="challenge-year" hidden></span>
             <button id="btnBackToday" class="back-today" type="button" hidden>
               <svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg>回到今天
             </button>
@@ -77,10 +80,10 @@
           <div id="board" class="board" role="grid" aria-label="日历拼图棋盘"></div>
         </div>
         <p class="board-legend">
-          <span><i class="month"></i>月份</span>
-          <span><i class="day"></i>日期</span>
-          <span><i class="week"></i>星期</span>
-          <span class="legend-tip">点格子直接换日期</span>
+          <span>月份 <b>3月</b></span>
+          <span>日期 <b>15日</b></span>
+          <span>星期 <b>周一</b></span>
+          <span class="legend-tip">顶部「日期」按钮可选年月日</span>
         </p>
         <div id="answerBar" class="answer-bar" hidden>
           <span id="answerText">答案模式</span>
@@ -162,8 +165,20 @@
         </button>
       </div>
       <div class="date-preview">
-        <strong id="datePreview">11月2日 星期一</strong>
+        <strong id="datePreview">2026年11月6日 星期五</strong>
         <span>星期按年月日自动计算</span>
+      </div>
+      <div class="date-section">
+        <h3>年份</h3>
+        <div class="year-row">
+          <button id="yearPrev" class="year-step" type="button" aria-label="上一年">
+            <svg class="ico" aria-hidden="true"><use href="#i-minus"/></svg>
+          </button>
+          <input id="yearInput" class="year-input" type="number" inputmode="numeric" min="1" max="9999" step="1" aria-label="年份">
+          <button id="yearNext" class="year-step" type="button" aria-label="下一年">
+            <svg class="ico" aria-hidden="true"><use href="#i-plus"/></svg>
+          </button>
+        </div>
       </div>
       <div class="date-section">
         <h3>月份</h3>
@@ -217,7 +232,7 @@
         <h3>怎么玩</h3>
         <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格 星期按所选年月日自动算出 不用手动选择</p>
         <ul>
-          <li>没选中拼块时 点棋盘上的月份 日期 星期格可以直接换到那一天 顶部回到今天可一键还原</li>
+          <li>换日期请点顶部「日期」按钮 可以选年 月 日 星期按所选日期自动计算 顶部回到今天可一键还原</li>
           <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
           <li>点旋转或翻转调整选中拼块的朝向 允许翻转</li>
           <li>点棋盘上已放置的拼块可以取下 点拼块托盘里的已用拼块也可以取下</li>

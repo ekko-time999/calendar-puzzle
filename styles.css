@@ -308,6 +308,20 @@ a.btn:focus-visible {
 .back-today:hover { color: var(--accent-ink); border-color: var(--accent-soft); }
 .back-today:active { transform: scale(0.95); }
 
+.challenge-year {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: var(--surface);
+  color: var(--ink-2);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
 .challenge-tag {
   display: inline-flex;
   align-items: center;
@@ -390,7 +404,7 @@ a.btn:focus-visible {
   --cell: 56px;
   --gap: 3px;
   --pad: 11px;
-  --piece-r: 10px;
+  --piece-r: 7px;
   position: relative;
   isolation: isolate;
   display: grid;
@@ -428,12 +442,13 @@ a.btn:focus-visible {
   filter: drop-shadow(0 3px 3px rgba(28, 19, 10, 0.24));
   will-change: transform, opacity;
 }
-.piece-cell {
-  position: absolute;
+.piece-svg {
   display: block;
+  width: 100%;
+  height: 100%;
 }
 
-/* 固定标签层：月份 日期 星期始终完整显示，拼块盖上去也不隐藏 */
+/* 固定标签层：所有格统一标签规范 位置居中 字号与颜色层级一致 */
 .label-layer {
   position: absolute;
   left: var(--pad);
@@ -452,30 +467,29 @@ a.btn:focus-visible {
   position: relative;
   display: grid;
   place-items: center;
-  border-radius: 7px;
+  border-radius: var(--cell-r, 7px);
   font-size: 11px;
   font-weight: 600;
   line-height: 1;
   letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
-  color: rgba(255, 253, 248, 0.88);
+  color: rgba(255, 253, 248, 0.84);
   text-shadow: 0 1px 2px rgba(20, 14, 8, 0.72), 0 0 3px rgba(20, 14, 8, 0.56);
-  opacity: 0.72;
-  transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+  transition: color 0.22s ease, text-shadow 0.22s ease;
 }
-.cell-label.week { font-size: 10px; letter-spacing: 0; }
-
-/* 今日不是当前目标时 今天的三格仍在拼块之上鲜明标出 */
-.cell-label.today-other {
-  opacity: 1;
-  color: #fff;
+/* 选中格用同一套暖色强调：浅底 + 深字 */
+.cell-label.target {
+  color: var(--accent-ink);
   font-weight: 700;
-  background: color-mix(in srgb, var(--accent) 24%, transparent);
-  box-shadow:
-    inset 0 0 0 2px color-mix(in srgb, var(--accent) 82%, transparent),
-    0 0 16px color-mix(in srgb, var(--accent) 42%, transparent);
+  text-shadow: none;
 }
-.cell-label.today-other::after {
+/* 拼块盖住的格隐藏数字 拼块看起来是一整块 */
+.cell-label.covered {
+  color: transparent;
+  text-shadow: none;
+}
+/* 今天的三个格统一用一个「今」角标 */
+.cell-label.is-today::after {
   content: '今';
   position: absolute;
   top: 2px;
@@ -486,11 +500,12 @@ a.btn:focus-visible {
   display: grid;
   place-items: center;
   border-radius: 4px;
-  background: color-mix(in srgb, var(--accent) 72%, #000 4%);
+  background: var(--accent);
   color: #fff;
   font-size: 7px;
   font-weight: 700;
   line-height: 1;
+  letter-spacing: 0;
   text-shadow: none;
   animation: todayBreath 3.4s ease-in-out infinite;
 }
@@ -517,20 +532,17 @@ a.btn:focus-visible {
   animation-delay: calc(var(--i, 0) * 9ms + 120ms);
 }
 
-/* 所有带日期含义的格都可点击换日期 */
-.board:not(.locked) .cell[data-kind] { cursor: pointer; }
-.board:not(.locked) .cell[data-kind]:active { transform: scale(0.93); }
+/* 换日期只走顶部日期按钮 底盘格子不再切换日期 */
+.board:not(.locked) .cell.empty { cursor: pointer; }
 
 /* 换日期时新旧目标格的平滑衔接 */
 .cell.target.target-in { animation: targetIn 0.42s var(--ease-out) both; }
 .cell.target.target-flash {
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.45),
-    0 0 0 3px color-mix(in srgb, var(--accent) 24%, transparent),
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 58%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 22%, transparent),
     0 0 18px color-mix(in srgb, var(--accent) 30%, transparent);
 }
-.cell.cell-tap { animation: cellTap 0.28s var(--ease-press); }
-.cell-label.label-shift { animation: labelShift 0.32s var(--ease-out); }
 .piece-layer-out {
   z-index: 2;
   pointer-events: none;
@@ -559,63 +571,25 @@ a.btn:focus-visible {
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
 }
 
+/* 三目标格统一用同一个暖色强调 不再按月份 日期 星期各配一种颜色 */
 .cell.target {
-  display: flex;
-  flex-direction: column;
-  justify-content: flex-end;
-  align-items: flex-start;
-  padding: 3px 4px 4px;
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  background: linear-gradient(156deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 76%, #fff));
+  border: 1px solid color-mix(in srgb, var(--accent) 38%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--accent) 16%, transparent);
 }
-.cell.target.month { background: linear-gradient(156deg, #fff0e6, #ffe2d2); color: #8a3416; }
-.cell.target.day { background: linear-gradient(156deg, #e9f8f4, #d7efe9); color: #0f5f55; }
-.cell.target.week { background: linear-gradient(156deg, #efedfe, #e2e0fc); color: #3730a3; }
-
-.cell.target { position: relative; }
-/* 今日目标格角标 用轻呼吸提示 不干扰数字 */
-.cell.target.today-cell::after {
-  content: '今';
-  position: absolute;
-  top: 2px;
-  right: 2px;
-  min-width: 12px;
-  height: 12px;
-  padding: 0 2px;
-  display: grid;
-  place-items: center;
-  border-radius: 4px;
-  background: color-mix(in srgb, currentColor 12%, transparent);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
-  font-size: 7px;
-  font-weight: 700;
-  line-height: 1;
-  letter-spacing: 0;
-  opacity: 0.86;
-  animation: todayBreath 3.4s ease-in-out infinite;
+.cell.target.today-cell {
+  box-shadow:
+    inset 0 0 0 1.5px color-mix(in srgb, var(--accent) 56%, transparent),
+    0 0 0 3px color-mix(in srgb, var(--accent) 12%, transparent);
 }
 
-/* 深色模式下日期格配色 避免浅底刺眼 */
+/* 深色模式保持同一套强调 只换深底浅字 */
 @media (prefers-color-scheme: dark) {
-  .cell.target { border-color: rgba(255, 255, 255, 0.06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07); }
-  .cell.target.month { background: linear-gradient(156deg, #3a2418, #2e1c12); color: #ffb39c; }
-  .cell.target.day { background: linear-gradient(156deg, #17302b, #132724); color: #7ee0cf; }
-  .cell.target.week { background: linear-gradient(156deg, #242144, #1c1a36); color: #b3aefc; }
+  .cell.target {
+    background: linear-gradient(156deg, var(--accent-soft), color-mix(in srgb, var(--accent-soft) 78%, #000));
+    border-color: color-mix(in srgb, var(--accent) 42%, transparent);
+  }
 }
-
-.cell-sub {
-  font-size: 8px;
-  line-height: 1;
-  opacity: 0.72;
-  letter-spacing: 0.04em;
-}
-.cell-main {
-  font-size: clamp(13px, 2.2vw, 16px);
-  font-weight: 700;
-  line-height: 1.05;
-  font-variant-numeric: tabular-nums;
-}
-.cell.target.week .cell-main { font-size: clamp(15px, 2.6vw, 18px); }
 
 .cell.preview-valid {
   background: rgba(42, 157, 143, 0.22);
@@ -644,16 +618,12 @@ a.btn:focus-visible {
   line-height: 1.4;
 }
 .board-legend span { display: inline-flex; align-items: center; gap: 5px; }
-.board-legend i {
-  width: 7px;
-  height: 7px;
-  border-radius: 2px;
-  display: block;
+.board-legend b {
+  font-weight: 600;
+  color: var(--ink-2);
+  font-variant-numeric: tabular-nums;
 }
-.board-legend i.month { background: #f0a07a; }
-.board-legend i.day { background: var(--teal); }
-.board-legend i.week { background: var(--indigo); }
-.board-legend .legend-tip { color: var(--ink-2); }
+.board-legend .legend-tip { color: var(--muted); }
 
 .answer-bar {
   margin: 2px 6px 0;
@@ -755,10 +725,6 @@ a.btn:focus-visible {
 /* 旋转 翻转后在托盘里做一次形变衔接 */
 .mini.turn { animation: miniTurn 0.34s var(--ease-out); }
 .mini.flipx { animation: miniFlip 0.34s var(--ease-out); }
-.mini-cell {
-  position: absolute;
-  display: block;
-}
 .tray-num {
   position: absolute;
   right: 8px;
@@ -887,10 +853,6 @@ a.btn:focus-visible {
   transition: opacity 0.16s ease;
 }
 .drag-ghost.show { opacity: 0.96; }
-.drag-ghost .ghost-cell {
-  position: absolute;
-  display: block;
-}
 .drag-ghost.invalid { opacity: 0.4; filter: grayscale(0.4) drop-shadow(0 12px 14px rgba(25, 18, 12, 0.22)); }
 
 /* ---------- 安装引导 ---------- */
@@ -1069,6 +1031,50 @@ a.btn:focus-visible {
 
 .date-section { margin-bottom: 14px; }
 .date-section h3 { margin: 0 0 7px; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.1em; }
+
+/* 年份选择：减 输入 加 任何年份都能直接输入 */
+.year-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+.year-step {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 auto;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink-2);
+  cursor: pointer;
+  display: grid;
+  place-items: center;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease);
+}
+.year-step .ico { width: 16px; height: 16px; }
+.year-step:hover { background: var(--surface); border-color: var(--line-strong); transform: translateY(-1px) scale(1.04); }
+.year-step:active { transform: scale(0.94); }
+.year-input {
+  width: 116px;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--surface-2);
+  color: var(--ink);
+  font-family: inherit;
+  font-size: 16px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+  -moz-appearance: textfield;
+  appearance: textfield;
+}
+.year-input:focus-visible,
+.year-step:focus-visible { outline: 2px solid color-mix(in srgb, var(--accent) 58%, transparent); outline-offset: 2px; }
+.year-input::-webkit-outer-spin-button,
+.year-input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
 .chips { display: grid; gap: 6px; }
 .month-chips { grid-template-columns: repeat(6, minmax(0, 1fr)); }
@@ -1291,15 +1297,6 @@ a.btn:focus-visible {
   70% { opacity: 1; transform: scale(1.03); }
   100% { opacity: 1; transform: none; }
 }
-@keyframes cellTap {
-  0% { transform: scale(1); }
-  45% { transform: scale(0.9); }
-  100% { transform: scale(1); }
-}
-@keyframes labelShift {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 0.72; transform: none; }
-}
 @keyframes layerFade {
   from { opacity: 0.92; }
   to { opacity: 0; }
@@ -1433,14 +1430,14 @@ a.btn:focus-visible {
     flex-wrap: nowrap;
     gap: 8px;
   }
-  .challenge-left { display: flex; align-items: center; gap: 7px; flex: 1 1 auto; min-width: 0; }
+  .challenge-left { display: block; flex: 1 1 auto; min-width: 0; }
   .challenge-tag { padding: 2px 7px; font-size: 9px; flex: 0 0 auto; }
+  .challenge-year { padding: 2px 7px; font-size: 9px; }
   .challenge h1 {
-    margin: 0;
-    font-size: 16px;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    margin: 4px 0 0;
+    font-size: 15px;
+    white-space: normal;
+    overflow: visible;
   }
   .challenge-sub { display: none; }
   .metrics { width: auto; flex: 0 0 auto; gap: 5px; }
@@ -1455,17 +1452,12 @@ a.btn:focus-visible {
     --cell: max(28px, min(11.5vw, 46px, calc((100dvh - 430px) / 8)));
     --gap: 2px;
     --pad: 8px;
-    --piece-r: 7px;
+    --piece-r: 6px;
     border-radius: 16px;
   }
   .cell { border-radius: 6px; }
-  .cell.target { padding: 2px 3px 3px; }
-  .cell-sub { font-size: 7px; }
-  .cell-main { font-size: clamp(12px, 3.4vw, 15px); }
-  .cell.target.week .cell-main { font-size: clamp(14px, 4vw, 17px); }
-  .cell-label { font-size: 9.5px; border-radius: 6px; }
-  .cell-label.week { font-size: 8.5px; }
-  .cell-label.today-other::after { min-width: 10px; height: 10px; font-size: 6px; top: 1px; right: 1px; }
+  .cell-label { font-size: 9.5px; }
+  .cell-label.is-today::after { min-width: 10px; height: 10px; font-size: 6px; top: 1px; right: 1px; }
 
   .tray-card { padding: 8px 9px 6px; --mini: 11px; --mini-r: 3px; }
   .tray-head h2 { font-size: 13px; }
@@ -1523,31 +1515,12 @@ a.btn:focus-visible {
     --cell: max(26px, calc((100dvh - 158px) / 8));
     --gap: 2px;
     --pad: 8px;
-    --piece-r: 7px;
+    --piece-r: 5px;
     border-radius: 16px;
   }
   .cell { border-radius: 5px; }
-  .cell.target { padding: 1px 2px 2px; }
-  .cell-sub { font-size: 7px; }
-  .cell-main { font-size: 13px; }
-  .cell.target.week .cell-main { font-size: 15px; }
-  .cell-label { font-size: 9px; border-radius: 5px; }
-  .cell-label.week { font-size: 8px; }
-  .cell-label.today-other::after { width: 8px; min-width: 0; height: 8px; padding: 0; font-size: 0; border-radius: 50%; top: 2px; right: 2px; }
-  /* 横屏格子小 今日角标收成圆点 不挡数字 */
-  .cell.target.today-cell::after {
-    width: 4px;
-    height: 4px;
-    min-width: 0;
-    padding: 0;
-    top: 3px;
-    right: 3px;
-    font-size: 0;
-    border-radius: 50%;
-    background: currentColor;
-    box-shadow: none;
-    opacity: 0.55;
-  }
+  .cell-label { font-size: 9px; }
+  .cell-label.is-today::after { width: 8px; min-width: 0; height: 8px; padding: 0; font-size: 0; border-radius: 50%; top: 2px; right: 2px; }
 
   .tray-card { padding: 8px 9px 7px; --mini: 10px; --mini-r: 3px; }
   .tray-head h2 { font-size: 12px; }
