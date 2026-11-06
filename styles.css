@@ -646,6 +646,69 @@ button {
 }
 .drag-ghost.invalid { opacity: 0.4; filter: grayscale(0.4) drop-shadow(0 12px 14px rgba(25, 18, 12, 0.22)); }
 
+/* ---------- 安装引导 ---------- */
+.install-tip {
+  position: fixed;
+  left: 50%;
+  bottom: calc(64px + env(safe-area-inset-bottom));
+  z-index: 65;
+  width: min(340px, calc(100vw - 24px));
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  padding: 8px 9px 8px 11px;
+  border: 1px solid var(--line);
+  border-radius: 15px;
+  background: var(--surface);
+  box-shadow: 0 20px 36px -22px rgba(30, 22, 14, 0.6);
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, 18px) scale(0.96);
+  transition: opacity 0.28s ease, transform 0.38s var(--ease-out);
+}
+.install-tip.show {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translate(-50%, 0) scale(1);
+}
+.install-tip-icon {
+  width: 32px;
+  height: 32px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  border-radius: 10px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+}
+.install-tip-icon .ico { width: 16px; height: 16px; }
+.install-tip-text { flex: 1; min-width: 0; line-height: 1.25; }
+.install-tip-text strong { display: block; font-size: 12.5px; letter-spacing: 0.01em; }
+.install-tip-text span { display: block; margin-top: 1px; font-size: 10px; color: var(--muted); }
+.install-tip-go {
+  flex: 0 0 auto;
+  padding: 8px 13px;
+  font-size: 12px;
+  border-radius: 9px;
+}
+.install-tip-close {
+  width: 26px;
+  height: 26px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: color 0.2s ease, transform 0.25s var(--ease);
+}
+.install-tip-close:hover { color: var(--ink); transform: rotate(90deg); }
+.install-tip-close:active { transform: rotate(90deg) scale(0.9); }
+.install-tip-close .ico { width: 14px; height: 14px; }
+
 /* ---------- 提示条 ---------- */
 .toast {
   position: fixed;
@@ -1092,6 +1155,8 @@ button {
   .dock-btn span { display: none; }
   .dock-btn .ico { width: 15px; height: 15px; }
   .toast { bottom: calc(76px + env(safe-area-inset-bottom)); font-size: 12px; }
+  body.tip-open .toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
+  .install-tip { bottom: calc(62px + env(safe-area-inset-bottom)); padding: 7px 8px 7px 10px; }
 
   .modal { padding: 12px; align-items: flex-end; }
   .modal-card {
@@ -1102,6 +1167,15 @@ button {
   }
   .stats-grid { gap: 8px; }
   .stat-card strong { font-size: 20px; }
+}
+
+@media (max-width: 900px) and (max-height: 700px) {
+  .install-tip { padding: 6px 7px 6px 9px; gap: 7px; }
+  .install-tip-icon { width: 26px; height: 26px; border-radius: 8px; }
+  .install-tip-icon .ico { width: 14px; height: 14px; }
+  .install-tip-text strong { font-size: 12px; }
+  .install-tip-text span { display: none; }
+  .install-tip-go { padding: 6px 11px; }
 }
 
 @media (max-width: 380px) {

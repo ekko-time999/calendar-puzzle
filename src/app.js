@@ -245,12 +245,68 @@
   }
 
   // ---------- 安装 ----------
+  var INSTALL_TIP_KEY = 'cp-install-tip-hidden';
+
+  function isStandalone() {
+    return (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches) ||
+      window.navigator.standalone === true;
+  }
+
+  function tipWasHidden() {
+    try { return window.localStorage.getItem(INSTALL_TIP_KEY) === '1'; } catch (e) { return false; }
+  }
+
+  function rememberTipHidden() {
+    try { window.localStorage.setItem(INSTALL_TIP_KEY, '1'); } catch (e) { /* 隐私模式下忽略 */ }
+  }
+
   function initInstall() {
     var btn = $('btnInstall');
+    var tip = $('installTip');
+    var tipGo = $('installTipGo');
+    var tipClose = $('installTipClose');
+    var tipTimer = null;
+
+    function hideTip(remember) {
+      if (!tip) return;
+      if (remember) rememberTipHidden();
+      tip.classList.remove('show');
+      document.body.classList.remove('tip-open');
+      clearTimeout(tipTimer);
+      tipTimer = setTimeout(function () { tip.hidden = true; }, 380);
+    }
+
+    function showTip() {
+      if (!deferredPrompt || !tip || isStandalone() || tipWasHidden()) return;
+      // 电脑端已有顶栏安装入口 只在手机端弹出
+      if (!window.matchMedia('(max-width: 900px)').matches) return;
+      clearTimeout(tipTimer);
+      tip.hidden = false;
+      document.body.classList.add('tip-open');
+      requestAnimationFrame(function () { tip.classList.add('show'); });
+    }
+
+    function runPrompt() {
+      var prompt = deferredPrompt;
+      if (!prompt) return;
+      deferredPrompt = null;
+      prompt.prompt();
+      var choice = prompt.userChoice;
+      if (!choice || !choice.then) return;
+      choice.then(function (result) {
+        btn.hidden = true;
+        hideTip(true);
+        if (result && result.outcome === 'accepted' && game) {
+          game.toast('安装完成 之后离线也能打开');
+        }
+      });
+    }
+
     window.addEventListener('beforeinstallprompt', function (e) {
       e.preventDefault();
       deferredPrompt = e;
       btn.hidden = false;
+      setTimeout(showTip, 900);
     });
 
     btn.addEventListener('click', function () {
@@ -258,18 +314,15 @@
         openHelp();
         return;
       }
-      deferredPrompt.prompt();
-      deferredPrompt.userChoice.then(function (choice) {
-        if (choice.outcome === 'accepted') {
-          btn.hidden = true;
-          if (game) game.toast('安装完成 之后离线也能打开');
-        }
-        deferredPrompt = null;
-      });
+      runPrompt();
     });
+
+    if (tipGo) tipGo.addEventListener('click', runPrompt);
+    if (tipClose) tipClose.addEventListener('click', function () { hideTip(true); });
 
     window.addEventListener('appinstalled', function () {
       btn.hidden = true;
+      hideTip(true);
       if (game) game.toast('已安装到设备');
     });
   }

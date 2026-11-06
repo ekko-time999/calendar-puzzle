@@ -125,6 +125,20 @@
     </footer>
   </div>
 
+  <div id="installTip" class="install-tip" role="dialog" aria-live="polite" aria-label="安装到主屏幕" hidden>
+    <span class="install-tip-icon" aria-hidden="true">
+      <svg class="ico" aria-hidden="true"><use href="#i-install"/></svg>
+    </span>
+    <div class="install-tip-text">
+      <strong>装到桌面 离线也能玩</strong>
+      <span>独立全屏 没有地址栏</span>
+    </div>
+    <button id="installTipGo" class="btn primary install-tip-go" type="button">安装</button>
+    <button id="installTipClose" class="install-tip-close" type="button" aria-label="暂不安装">
+      <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+    </button>
+  </div>
+
   <div id="toast" class="toast" aria-live="polite"></div>
 
   <div id="dateModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dateModalTitle">
