@@ -1,0 +1,3605 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+  <meta name="theme-color" content="#f4eee3">
+  <meta name="description" content="10 块日历拼图 铺满棋盘 只留下月 日 星期三个格子 每天一道 离线可玩">
+  <!-- 单文件离线版 双击即可游玩 不依赖网络 -->
+  <title>日历拼图 10 块星期版</title>
+  <style>
+:root {
+  --bg: #f4eee3;
+  --bg-deep: #ede2d2;
+  --glow1: #fffaf0;
+  --glow2: #e9dcc9;
+  --surface: #fffdf8;
+  --surface-2: #f7f0e4;
+  --surface-translucent: rgba(255, 253, 248, 0.84);
+  --ink: #2c2722;
+  --ink-2: #5d554c;
+  --muted: #958a7d;
+  --line: #e6dacb;
+  --line-strong: #d7c8b5;
+  --frame: #38322c;
+  --frame-2: #2c2722;
+  --cell-empty: #e7dccd;
+  --cell-empty-2: #dfd2c1;
+  --wall: #211e1a;
+  --accent: #e76f51;
+  --accent-soft: #ffe7df;
+  --accent-ink: #9a3412;
+  --teal: #2a9d8f;
+  --teal-soft: #dff3ef;
+  --indigo: #4f46e5;
+  --indigo-soft: #e8e7fd;
+  --good: #0f766e;
+  --shadow: 0 26px 50px -30px rgba(73, 55, 38, 0.55);
+  --shadow-soft: 0 14px 30px -22px rgba(73, 55, 38, 0.55);
+  --radius: 18px;
+  --mini: 15px;
+  --mini-r: 4px;
+  --piece-r: 10px;
+  --ease: cubic-bezier(0.22, 0.9, 0.24, 1);
+  --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  color-scheme: light dark;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #15130f;
+    --bg-deep: #100f0c;
+    --glow1: #1f1b15;
+    --glow2: #191611;
+    --surface: #201d18;
+    --surface-2: #2a261f;
+    --surface-translucent: rgba(32, 29, 24, 0.86);
+    --ink: #f4ede2;
+    --ink-2: #c8bda9;
+    --muted: #8f8370;
+    --line: #383228;
+    --line-strong: #4a4235;
+    --frame: #0f0e0c;
+    --frame-2: #080807;
+    --cell-empty: #2c2821;
+    --cell-empty-2: #26221c;
+    --wall: #0a0908;
+    --accent: #f07a5c;
+    --accent-soft: #3a211a;
+    --accent-ink: #ffb39c;
+    --teal: #4cc2b2;
+    --teal-soft: #142e2b;
+    --indigo: #8b85ff;
+    --indigo-soft: #211f3d;
+    --good: #4cc2b2;
+    --shadow: 0 26px 50px -30px rgba(0, 0, 0, 0.8);
+    --shadow-soft: 0 14px 30px -22px rgba(0, 0, 0, 0.75);
+  }
+}
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  min-height: 100%;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+  background: var(--bg);
+  color: var(--ink);
+  -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
+  -webkit-tap-highlight-color: transparent;
+}
+
+body::before {
+  content: "";
+  position: fixed;
+  inset: -12%;
+  z-index: 0;
+  pointer-events: none;
+  background: var(--glow1);
+  background:
+    radial-gradient(46% 38% at 16% 6%, color-mix(in srgb, var(--accent) 16%, transparent), transparent 68%),
+    radial-gradient(42% 36% at 88% 2%, color-mix(in srgb, var(--teal) 14%, transparent), transparent 70%),
+    radial-gradient(52% 46% at 72% 96%, color-mix(in srgb, var(--indigo) 12%, transparent), transparent 72%),
+    radial-gradient(60% 50% at 8% 92%, color-mix(in srgb, var(--glow2) 80%, transparent), transparent 75%);
+  animation: aurora 20s ease-in-out infinite alternate;
+}
+
+body.modal-open { overflow: hidden; }
+
+button {
+  font-family: inherit;
+  color: inherit;
+}
+
+[hidden] { display: none !important; }
+
+.sprite {
+  position: absolute;
+  width: 0;
+  height: 0;
+  overflow: hidden;
+}
+
+.ico {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 auto;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.app {
+  position: relative;
+  z-index: 1;
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* ---------- 顶栏 ---------- */
+.topbar {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 18px 20px 10px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  animation: fadeDown 0.7s var(--ease-out) both;
+}
+
+.brand {
+  display: flex;
+  align-items: center;
+  gap: 11px;
+  user-select: none;
+}
+
+.brand-mark {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  background: var(--ink);
+  padding: 7px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3px;
+  box-shadow: var(--shadow-soft);
+  flex: 0 0 auto;
+  transition: transform 0.4s var(--ease);
+}
+.brand:hover .brand-mark { transform: rotate(-4deg) scale(1.04); }
+
+.brand-mark i { display: block; border-radius: 4px; transition: transform 0.4s var(--ease); }
+.brand-mark i:nth-child(1) { background: #ef6f6c; }
+.brand-mark i:nth-child(2) { background: #f4c95d; }
+.brand-mark i:nth-child(3) { background: #43aa8b; }
+.brand-mark i:nth-child(4) { background: #4cc9f0; }
+.brand:hover .brand-mark i:nth-child(1) { transform: translate(-2px, -2px); }
+.brand:hover .brand-mark i:nth-child(4) { transform: translate(2px, 2px); }
+
+.brand-text { display: flex; flex-direction: column; line-height: 1.15; }
+.brand-text b { font-size: 17px; letter-spacing: 0.02em; }
+.brand-text small { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-top: 3px; }
+
+.top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+
+.btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 11px;
+  padding: 9px 14px;
+  font-size: 13px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  box-shadow: 0 1px 0 rgba(255, 255, 255, 0.5) inset;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.22s var(--ease),
+    box-shadow 0.22s ease,
+    color 0.2s ease;
+}
+.btn:hover { background: var(--surface-2); border-color: var(--line-strong); transform: translateY(-1px) scale(1.03); }
+.btn:active { transform: scale(0.96); box-shadow: none; }
+.btn.subtle { background: var(--surface-translucent); backdrop-filter: blur(10px); }
+.btn.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
+.btn.primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
+.btn.icon {
+  padding: 0;
+  display: inline-grid;
+  place-items: center;
+}
+.btn.icon { width: 38px; height: 38px; border-radius: 50%; }
+.btn.icon-sm {
+  width: auto;
+  height: 38px;
+  padding: 0 12px;
+  gap: 7px;
+  border-radius: 11px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.btn.icon-sm .ico { width: 17px; height: 17px; }
+.btn.icon .ico { width: 18px; height: 18px; }
+.btn.install-btn {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #fff;
+  font-weight: 600;
+}
+.btn.install-btn:hover { background: #d95f42; border-color: #d95f42; }
+
+/* ---------- 布局 ---------- */
+.layout {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 6px 20px 20px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 318px;
+  grid-template-areas:
+    "challenge challenge"
+    "board tray";
+  gap: 16px;
+  align-items: start;
+  flex: 1;
+}
+
+.panel {
+  background: var(--surface);
+  background: linear-gradient(168deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--surface-2)));
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  box-shadow:
+    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    var(--shadow-soft);
+}
+
+.challenge {
+  grid-area: challenge;
+  padding: 16px 22px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 20px;
+  animation: riseIn 0.7s 0.06s var(--ease-out) both;
+}
+
+.challenge-left { min-width: 0; }
+
+.challenge-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--accent-soft);
+  color: var(--accent-ink);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  transition: background-color 0.25s ease, color 0.25s ease, transform 0.25s var(--ease);
+}
+.challenge-tag.free { background: var(--indigo-soft); color: var(--indigo); }
+.challenge-tag.done { background: var(--teal-soft); color: var(--good); }
+.challenge-tag.pop { animation: tagPop 0.45s var(--ease); }
+
+.challenge h1 {
+  margin: 8px 0 3px;
+  font-size: clamp(20px, 3.2vw, 27px);
+  letter-spacing: 0.01em;
+  line-height: 1.15;
+}
+.challenge h1.swap { animation: titleSwap 0.5s var(--ease-out); }
+
+.challenge-sub { margin: 0; font-size: 12px; color: var(--muted); }
+
+.metrics { display: flex; gap: 8px; flex: 0 0 auto; }
+.metric {
+  min-width: 66px;
+  padding: 8px 11px 7px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  text-align: center;
+  transition: transform 0.25s var(--ease), border-color 0.25s ease;
+}
+.metric span { display: block; font-size: 10px; color: var(--muted); letter-spacing: 0.08em; }
+.metric strong {
+  display: block;
+  margin-top: 2px;
+  font-size: 18px;
+  font-variant-numeric: tabular-nums;
+  line-height: 1.1;
+}
+.metric strong.bump { animation: metricBump 0.42s var(--ease); }
+
+.board-card {
+  grid-area: board;
+  padding: 10px 10px 12px;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  animation: riseIn 0.75s 0.12s var(--ease-out) both;
+}
+
+.board-wrap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 4px;
+}
+
+.board {
+  --cell: 56px;
+  --gap: 3px;
+  --pad: 11px;
+  --piece-r: 10px;
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: var(--gap);
+  padding: var(--pad);
+  border-radius: 20px;
+  background:
+    radial-gradient(120% 90% at 50% -20%, rgba(255, 255, 255, 0.1), transparent 60%),
+    linear-gradient(160deg, var(--frame), var(--frame-2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.14),
+    0 24px 40px -24px rgba(30, 22, 14, 0.8);
+  touch-action: none;
+  user-select: none;
+  margin: 0 auto;
+}
+
+/* 拼块整体形状层 */
+.piece-layer {
+  position: absolute;
+  left: var(--pad);
+  top: var(--pad);
+  width: calc(var(--cell) * 7 + var(--gap) * 6);
+  height: calc(var(--cell) * 8 + var(--gap) * 7);
+  pointer-events: none;
+  z-index: 2;
+}
+
+.piece {
+  position: absolute;
+  filter: drop-shadow(0 3px 3px rgba(28, 19, 10, 0.24));
+  will-change: transform, opacity;
+}
+.piece-cell {
+  position: absolute;
+  display: block;
+}
+.piece.enter { animation: pieceIn 0.36s var(--ease-out) backwards; }
+.piece.hint-piece {
+  opacity: 0.42;
+  animation: hintFloat 1.7s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(231, 111, 81, 0.45));
+}
+.piece.answer-piece { filter: drop-shadow(0 4px 5px rgba(28, 19, 10, 0.28)); }
+.piece.reveal-piece { animation: pieceReveal 0.5s var(--ease-out) both; }
+.piece.out { pointer-events: none; }
+
+.cell {
+  position: relative;
+  border-radius: 7px;
+  background: var(--cell-empty);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s var(--ease);
+  animation: cellIn 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 9ms + 120ms);
+}
+
+.cell.empty {
+  background: linear-gradient(150deg, var(--cell-empty), var(--cell-empty-2));
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 -1px 0 rgba(0, 0, 0, 0.08);
+}
+
+.board:not(.locked) .cell.empty:hover {
+  background: linear-gradient(150deg, color-mix(in srgb, var(--cell-empty) 88%, #fff), var(--cell-empty-2));
+  transform: scale(1.02);
+}
+
+.cell.wall {
+  background:
+    repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.045) 0 3px, transparent 3px 7px),
+    var(--wall);
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+
+.cell.target {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  align-items: flex-start;
+  padding: 3px 4px 4px;
+  border: 1px solid rgba(0, 0, 0, 0.06);
+}
+.cell.target.month { background: #ffe6d8; color: #8a3416; }
+.cell.target.day { background: #ddf3ee; color: #0f5f55; }
+.cell.target.week { background: #e7e5fd; color: #3730a3; }
+
+.cell-sub {
+  font-size: 8px;
+  line-height: 1;
+  opacity: 0.72;
+  letter-spacing: 0.04em;
+}
+.cell-main {
+  font-size: clamp(13px, 2.2vw, 16px);
+  font-weight: 700;
+  line-height: 1.05;
+  font-variant-numeric: tabular-nums;
+}
+.cell.target.week .cell-main { font-size: clamp(15px, 2.6vw, 18px); }
+
+.cell.preview-valid {
+  background: rgba(42, 157, 143, 0.22);
+  box-shadow: inset 0 0 0 2px var(--teal);
+  transform: scale(0.98);
+}
+.cell.preview-invalid {
+  background: rgba(231, 111, 81, 0.2);
+  box-shadow: inset 0 0 0 2px var(--accent);
+  transform: scale(0.98);
+}
+
+.board.locked .cell { cursor: default; }
+.board.shake { animation: boardShake 0.5s ease; }
+
+.answer-bar {
+  margin: 2px 6px 0;
+  padding: 10px 12px;
+  border-radius: 12px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+  font-size: 12px;
+  color: var(--ink-2);
+}
+.answer-bar:not([hidden]) { animation: riseIn 0.4s var(--ease-out) both; }
+.answer-actions { display: flex; gap: 6px; }
+.mini-btn {
+  border: 1px solid var(--line-strong);
+  background: var(--surface);
+  border-radius: 9px;
+  padding: 5px 10px;
+  font-size: 12px;
+  cursor: pointer;
+  transition: background-color 0.2s ease, transform 0.2s var(--ease), border-color 0.2s ease;
+}
+.mini-btn:hover { background: var(--surface-2); transform: translateY(-1px) scale(1.04); }
+.mini-btn:active { transform: scale(0.96); }
+
+/* ---------- 拼块托盘 ---------- */
+.tray-card {
+  grid-area: tray;
+  padding: 15px 15px 13px;
+  --mini: 15px;
+  --mini-r: 4px;
+  animation: riseIn 0.75s 0.18s var(--ease-out) both;
+}
+
+.tray-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.tray-head h2 { margin: 0; font-size: 15px; letter-spacing: 0.02em; }
+.tray-head span { font-size: 10.5px; color: var(--muted); }
+
+.tray {
+  margin-top: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.tray-piece {
+  position: relative;
+  min-height: 73px;
+  padding: 7px;
+  border: 1px dashed transparent;
+  border-radius: 13px;
+  background: var(--surface-2);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: grab;
+  touch-action: none;
+  animation: trayIn 0.5s var(--ease-out) backwards;
+  animation-delay: calc(var(--ti, 0) * 45ms + 220ms);
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.25s ease,
+    opacity 0.25s ease,
+    transform 0.25s var(--ease);
+}
+.tray-piece:hover {
+  background: var(--surface);
+  border-color: var(--line-strong);
+  transform: translateY(-2px) scale(1.02);
+}
+.tray-piece:active { cursor: grabbing; transform: scale(0.97); }
+.tray-piece.selected {
+  background: var(--surface);
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px rgba(231, 111, 81, 0.16), 0 10px 22px -16px rgba(231, 111, 81, 0.65);
+  transform: translateY(-2px);
+}
+.tray-piece.placed { opacity: 0.38; cursor: pointer; }
+.tray-piece.placed .mini { filter: saturate(0.45); }
+.tray-piece.hinting { animation: hintPiece 1.6s ease-in-out infinite; }
+
+.mini {
+  position: relative;
+  display: block;
+}
+.mini-cell {
+  position: absolute;
+  display: block;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.tray-num {
+  position: absolute;
+  right: 8px;
+  bottom: 5px;
+  font-size: 9px;
+  color: var(--muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.tray-foot {
+  margin: 11px 2px 0;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+/* ---------- 底部操作栏 ---------- */
+.dock {
+  position: sticky;
+  bottom: 0;
+  z-index: 30;
+  padding: 10px 20px calc(10px + env(safe-area-inset-bottom));
+  background: linear-gradient(to top, var(--bg) 32%, transparent);
+  animation: riseIn 0.7s 0.24s var(--ease-out) both;
+}
+
+.dock-inner {
+  width: min(1080px, 100%);
+  margin: 0 auto;
+  padding: 8px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  background: var(--surface-translucent);
+  backdrop-filter: blur(18px);
+  box-shadow: var(--shadow);
+}
+
+.dock-group { display: flex; gap: 6px; }
+.dock-right { margin-left: auto; }
+
+.dock-btn {
+  border: 1px solid var(--line);
+  background: var(--surface);
+  border-radius: 10px;
+  padding: 8px 12px;
+  font-size: 12px;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition:
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    opacity 0.2s ease,
+    transform 0.24s var(--ease),
+    box-shadow 0.24s ease;
+}
+.dock-btn .ico { width: 15px; height: 15px; }
+.dock-btn:hover:not(:disabled) {
+  background: var(--surface-2);
+  border-color: var(--line-strong);
+  transform: translateY(-1px) scale(1.04);
+  box-shadow: 0 8px 16px -12px rgba(40, 28, 18, 0.6);
+}
+.dock-btn:active:not(:disabled) { transform: scale(0.95); box-shadow: none; }
+.dock-btn:disabled { opacity: 0.34; cursor: default; }
+.dock-btn.flash { animation: flashBtn 1.1s ease; }
+
+/* ---------- 拖拽影子 ---------- */
+.drag-ghost {
+  position: fixed;
+  left: 0;
+  top: 0;
+  z-index: 60;
+  display: block;
+  pointer-events: none;
+  opacity: 0;
+  transform-origin: 0 0;
+  filter: drop-shadow(0 16px 18px rgba(25, 18, 12, 0.3));
+  transition: opacity 0.16s ease;
+}
+.drag-ghost.show { opacity: 0.96; }
+.drag-ghost .ghost-cell {
+  position: absolute;
+  display: block;
+}
+.drag-ghost.invalid { opacity: 0.4; filter: grayscale(0.4) drop-shadow(0 12px 14px rgba(25, 18, 12, 0.22)); }
+
+/* ---------- 提示条 ---------- */
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: calc(96px + env(safe-area-inset-bottom));
+  z-index: 70;
+  transform: translate(-50%, 16px) scale(0.94);
+  opacity: 0;
+  pointer-events: none;
+  max-width: min(90vw, 520px);
+  padding: 10px 17px;
+  border-radius: 999px;
+  background: var(--ink);
+  color: var(--surface);
+  font-size: 12.5px;
+  text-align: center;
+  box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.7);
+  transition: opacity 0.24s ease, transform 0.3s var(--ease-out);
+}
+.toast.show { opacity: 1; transform: translate(-50%, 0) scale(1); }
+
+/* ---------- 弹层 ---------- */
+.modal {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  padding: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(28, 22, 16, 0.52);
+  backdrop-filter: blur(8px);
+  opacity: 0;
+  visibility: hidden;
+  transition: opacity 0.26s ease, visibility 0.26s ease;
+}
+.modal.open { opacity: 1; visibility: visible; }
+
+.modal-card {
+  position: relative;
+  width: min(560px, 100%);
+  max-height: calc(100vh - 36px);
+  overflow: auto;
+  padding: 22px 24px 24px;
+  border-radius: 22px;
+  background: var(--surface);
+  background: linear-gradient(168deg, var(--surface), color-mix(in srgb, var(--surface) 86%, var(--surface-2)));
+  border: 1px solid var(--line);
+  box-shadow: 0 34px 70px -30px rgba(20, 14, 8, 0.65);
+  opacity: 0;
+  transform: translateY(18px) scale(0.96);
+  transition: transform 0.34s var(--ease-out), opacity 0.26s ease;
+  -webkit-overflow-scrolling: touch;
+}
+.modal.open .modal-card { opacity: 1; transform: translateY(0) scale(1); }
+
+.modal.open .modal-card > *:not(.confetti):not(.win-check) {
+  animation: modalItem 0.5s var(--d, 0ms) var(--ease-out) both;
+}
+
+.modal-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+.modal-head h2 { margin: 0; font-size: 19px; letter-spacing: 0.02em; }
+.modal-close {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  cursor: pointer;
+  color: var(--ink-2);
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  transition: background-color 0.2s ease, transform 0.25s var(--ease), color 0.2s ease;
+}
+.modal-close .ico { width: 16px; height: 16px; }
+.modal-close:hover { background: var(--line); color: var(--ink); transform: rotate(90deg) scale(1.06); }
+.modal-close:active { transform: scale(0.94); }
+
+.date-preview {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px 14px;
+  margin-bottom: 16px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.date-preview strong { font-size: 16px; }
+.date-preview span { font-size: 10.5px; color: var(--muted); }
+
+.date-section { margin-bottom: 14px; }
+.date-section h3 { margin: 0 0 7px; font-size: 11px; color: var(--muted); font-weight: 600; letter-spacing: 0.1em; }
+
+.chips { display: grid; gap: 6px; }
+.month-chips { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+.day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+.week-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
+
+.chip {
+  padding: 8px 0;
+  border-radius: 9px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  font-size: 12.5px;
+  cursor: pointer;
+  font-variant-numeric: tabular-nums;
+  transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease);
+}
+.chip:hover { background: var(--surface); border-color: var(--line-strong); transform: translateY(-1px) scale(1.05); }
+.chip:active { transform: scale(0.95); }
+.chip.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--surface);
+  font-weight: 600;
+  transform: scale(1.02);
+}
+
+.date-warning {
+  margin: 4px 0 16px;
+  font-size: 11px;
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  padding: 8px 11px;
+  border-radius: 9px;
+}
+.date-warning[hidden] { display: none; }
+
+.modal-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+}
+.modal-actions .btn.primary { margin-left: auto; }
+
+/* ---------- 统计 ---------- */
+.stats-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.stat-card {
+  padding: 12px 14px;
+  border-radius: 13px;
+  border: 1px solid var(--line);
+  background: var(--surface-2);
+  animation: riseIn 0.45s var(--ease-out) backwards;
+  animation-delay: calc(60ms + var(--i, 0) * 55ms);
+}
+.stat-card span { display: block; font-size: 10.5px; color: var(--muted); margin-bottom: 5px; }
+.stat-card strong {
+  font-size: 22px;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+.stat-card em { font-style: normal; font-size: 11px; color: var(--muted); margin-left: 4px; }
+
+.heatmap-block {
+  padding-top: 16px;
+  border-top: 1px solid var(--line);
+}
+.heatmap-title {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+.heatmap-title h3 { margin: 0; font-size: 14px; }
+.heatmap-title span { font-size: 10px; color: var(--muted); }
+.heatmap-week {
+  margin: 10px 0 5px;
+  font-size: 9px;
+  color: var(--muted);
+  letter-spacing: 0.05em;
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  text-align: center;
+}
+.heatmap {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+.heat-cell {
+  aspect-ratio: 1;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  background: var(--surface-2);
+  display: grid;
+  place-items: center;
+  font-size: 8.5px;
+  color: var(--muted);
+  animation: cellIn 0.4s var(--ease-out) backwards;
+  animation-delay: calc(var(--i, 0) * 6ms);
+  transition: transform 0.2s var(--ease);
+}
+.heat-cell:hover { transform: scale(1.12); }
+.heat-cell.solved {
+  background: var(--accent);
+  border-color: rgba(255, 255, 255, 0.35);
+  color: #fff;
+  font-weight: 600;
+}
+.heat-cell.solved.free {
+  background: var(--teal);
+  color: #fff;
+}
+.heat-cell.future { opacity: 0.36; }
+.heat-cell.today { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+.hint-text {
+  margin: 10px 0 0;
+  font-size: 10.5px;
+  color: var(--muted);
+  line-height: 1.5;
+}
+.stats-foot { margin: 14px 0 0; font-size: 10.5px; color: var(--muted); }
+
+/* ---------- 帮助 ---------- */
+.help-card { width: min(620px, 100%); }
+.help-section { margin-bottom: 20px; }
+.help-section:last-child { margin-bottom: 0; }
+.help-section h3 { margin: 0 0 8px; font-size: 14px; }
+.help-section p { margin: 0 0 8px; font-size: 12.5px; color: var(--ink-2); line-height: 1.65; }
+.help-section ul, .help-section ol { margin: 0 0 8px; padding-left: 20px; }
+.help-section li { font-size: 12.5px; color: var(--ink-2); line-height: 1.7; margin-bottom: 3px; }
+.help-note {
+  padding: 8px 11px;
+  border-radius: 9px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+  color: var(--muted) !important;
+  font-size: 11.5px !important;
+}
+.help-download { display: inline-flex; margin-top: 4px; text-decoration: none; }
+
+/* ---------- 胜利 ---------- */
+.win-card { text-align: center; overflow: hidden; }
+.win-check {
+  width: 64px;
+  height: 64px;
+  margin: 6px auto 12px;
+  border-radius: 50%;
+  background: linear-gradient(160deg, #4cc2b2, var(--teal));
+  color: #fff;
+  display: grid;
+  place-items: center;
+  box-shadow: 0 18px 30px -16px rgba(42, 157, 143, 0.8);
+  animation: checkPop 0.6s 80ms var(--ease) both;
+}
+.win-check .ico { width: 30px; height: 30px; stroke-width: 2.2; }
+.win-card h2 { margin: 0 0 6px; font-size: 23px; }
+.win-sub { margin: 0; font-size: 12.5px; color: var(--muted); }
+.win-stats {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 9px;
+  margin: 18px 0 12px;
+}
+.win-stats div {
+  padding: 11px 8px;
+  border-radius: 12px;
+  background: var(--surface-2);
+  border: 1px solid var(--line);
+}
+.win-stats span { display: block; font-size: 10px; color: var(--muted); margin-bottom: 4px; }
+.win-stats strong { font-size: 19px; font-variant-numeric: tabular-nums; }
+.win-note { min-height: 17px; margin: 0 0 16px; font-size: 11.5px; color: var(--muted); }
+.win-actions { justify-content: center; }
+.win-actions .btn.primary { margin-left: 0; }
+
+.confetti { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.confetti i {
+  position: absolute;
+  top: -18px;
+  width: 7px;
+  height: 13px;
+  border-radius: 2px;
+  animation: confettiFall linear forwards;
+}
+
+/* ---------- 动效 ---------- */
+@keyframes aurora {
+  0% { transform: translate3d(0, 0, 0) scale(1); }
+  100% { transform: translate3d(2%, -2%, 0) scale(1.06); }
+}
+@keyframes fadeDown {
+  from { opacity: 0; transform: translateY(-12px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes riseIn {
+  from { opacity: 0; transform: translateY(16px) scale(0.985); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes cellIn {
+  from { opacity: 0; transform: scale(0.84); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes trayIn {
+  from { opacity: 0; transform: translateY(10px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pieceIn {
+  from { opacity: 0.35; transform: translateY(5px) scale(0.96); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes pieceReveal {
+  0% { opacity: 0; transform: translateY(7px) scale(0.9); }
+  70% { opacity: 1; transform: translateY(0) scale(1.03); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes hintFloat {
+  0%, 100% { opacity: 0.32; }
+  50% { opacity: 0.6; }
+}
+@keyframes modalItem {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes titleSwap {
+  0% { opacity: 0; transform: translateY(6px); }
+  100% { opacity: 1; transform: none; }
+}
+@keyframes tagPop {
+  0%, 100% { transform: scale(1); }
+  45% { transform: scale(1.12); }
+}
+@keyframes metricBump {
+  0% { transform: scale(1); }
+  40% { transform: scale(1.22); color: var(--accent); }
+  100% { transform: scale(1); }
+}
+@keyframes boardShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(4px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(2px); }
+}
+@keyframes hintPiece {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(231, 111, 81, 0); }
+  50% { box-shadow: 0 0 0 4px rgba(231, 111, 81, 0.18); }
+}
+@keyframes flashBtn {
+  0%, 100% { background: var(--surface); }
+  35%, 65% { background: var(--accent-soft); border-color: var(--accent); }
+}
+@keyframes checkPop {
+  0% { transform: scale(0.55); opacity: 0; }
+  70% { transform: scale(1.08); opacity: 1; }
+  100% { transform: scale(1); }
+}
+@keyframes confettiFall {
+  0% { transform: translateY(0) rotate(0deg); opacity: 1; }
+  100% { transform: translateY(360px) rotate(540deg); opacity: 0; }
+}
+
+/* ---------- 响应式 ---------- */
+@media (max-width: 900px) {
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "challenge"
+      "board"
+      "tray";
+    gap: 10px;
+    padding: 2px 10px 10px;
+  }
+
+  .topbar { padding: 10px 12px 6px; gap: 10px; }
+  .brand { gap: 8px; }
+  .brand-mark { width: 36px; height: 36px; padding: 6px; border-radius: 11px; }
+  .brand-text b { font-size: 15px; }
+  .brand-text small { font-size: 9px; margin-top: 2px; }
+  .top-actions { gap: 6px; }
+  .top-actions .label { display: none; }
+  .btn { padding: 7px 10px; font-size: 12px; }
+  .btn.icon-sm { width: 34px; height: 34px; padding: 0; }
+  .btn.icon { width: 34px; height: 34px; }
+  .btn.icon-sm .ico, .btn.icon .ico { width: 16px; height: 16px; }
+
+  .challenge {
+    padding: 8px 12px;
+    flex-wrap: nowrap;
+    gap: 8px;
+  }
+  .challenge-left { display: flex; align-items: center; gap: 7px; flex: 1 1 auto; min-width: 0; }
+  .challenge-tag { padding: 2px 7px; font-size: 9px; flex: 0 0 auto; }
+  .challenge h1 {
+    margin: 0;
+    font-size: 16px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+  .challenge-sub { display: none; }
+  .metrics { width: auto; flex: 0 0 auto; gap: 5px; }
+  .metric { min-width: 0; padding: 3px 6px; border-radius: 8px; }
+  .metric span { font-size: 8px; }
+  .metric strong { font-size: 13px; margin-top: 1px; }
+
+  .board-card { padding: 4px 4px 6px; }
+  .board-wrap { padding: 4px 2px; }
+  .board {
+    --cell: max(28px, min(11.5vw, 46px, calc((100vh - 430px) / 8)));
+    --cell: max(28px, min(11.5vw, 46px, calc((100dvh - 430px) / 8)));
+    --gap: 2px;
+    --pad: 8px;
+    --piece-r: 7px;
+    border-radius: 16px;
+  }
+  .cell { border-radius: 6px; }
+  .cell.target { padding: 2px 3px 3px; }
+  .cell-sub { font-size: 7px; }
+  .cell-main { font-size: clamp(12px, 3.4vw, 15px); }
+  .cell.target.week .cell-main { font-size: clamp(14px, 4vw, 17px); }
+
+  .tray-card { padding: 8px 9px 6px; --mini: 11px; --mini-r: 3px; }
+  .tray-head h2 { font-size: 13px; }
+  .tray-head span { display: none; }
+  .tray { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 5px; margin-top: 6px; }
+  .tray-piece { min-height: 47px; padding: 3px; border-radius: 9px; }
+  .tray-piece:hover { transform: none; }
+  .tray-num { display: none; }
+  .tray-foot { display: none; }
+
+  .dock { padding: 5px 8px calc(5px + env(safe-area-inset-bottom)); }
+  .dock-inner { gap: 5px; padding: 5px; border-radius: 13px; }
+  .dock-group { gap: 3px; }
+  .dock-btn { padding: 7px; font-size: 10.5px; border-radius: 8px; min-width: 34px; }
+  .dock-btn span { display: none; }
+  .dock-btn .ico { width: 15px; height: 15px; }
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom)); font-size: 12px; }
+
+  .modal { padding: 12px; align-items: flex-end; }
+  .modal-card {
+    width: 100%;
+    max-height: calc(100vh - 28px);
+    border-radius: 20px;
+    padding: 18px;
+  }
+  .stats-grid { gap: 8px; }
+  .stat-card strong { font-size: 20px; }
+}
+
+@media (max-width: 380px) {
+  .challenge-tag { display: none; }
+  .tray-card { --mini: 10px; --mini-r: 3px; }
+  .tray { gap: 5px; }
+  .tray-piece { min-height: 46px; }
+  .dock-btn { padding: 7px 6px; font-size: 10.5px; }
+  .metric strong { font-size: 13px; }
+  .month-chips { gap: 4px; }
+  .day-chips { gap: 4px; }
+  .chip { padding: 7px 0; font-size: 11.5px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
+}
+
+:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+</style>
+</head>
+<body>
+  <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
+    <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
+    <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/><path d="M16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"/></symbol>
+    <symbol id="i-hint" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 6 0 0 0 0 9.5c0 1 .5 2.2 1.5 3.1.8.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
+    <symbol id="i-answer" viewBox="0 0 24 24"><path d="M2 12c2.5-4.2 6-6.5 10-6.5s7.5 2.3 10 6.5c-2.5 4.2-6 6.5-10 6.5S4.5 16.2 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
+    <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
+    <symbol id="i-calendar" viewBox="0 0 24 24"><rect x="3" y="5" width="18" height="16" rx="3"/><path d="M8 3v4M16 3v4M3 11h18"/></symbol>
+    <symbol id="i-stats" viewBox="0 0 24 24"><path d="M5 20v-6M11 20V8M17 20v-9"/><path d="M3 20h18"/></symbol>
+    <symbol id="i-help" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.2 9a2.9 2.9 0 0 1 5.6 1c0 1.9-2.8 2.4-2.8 3.4"/><path d="M12 17h.01"/></symbol>
+    <symbol id="i-install" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/></symbol>
+    <symbol id="i-close" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="m20 6-11 11-5-5"/></symbol>
+  </svg>
+
+  <div class="app">
+    <header class="topbar">
+      <div class="brand">
+        <span class="brand-mark" aria-hidden="true"><i></i><i></i><i></i><i></i></span>
+        <span class="brand-text">
+          <b>日历拼图</b>
+          <small>10 块 星期版</small>
+        </span>
+      </div>
+      <nav class="top-actions">
+        <button id="btnInstall" class="btn subtle icon-sm install-btn" hidden>
+          <svg class="ico" aria-hidden="true"><use href="#i-install"/></svg><span class="label">安装到设备</span>
+        </button>
+        <button id="btnDate" class="btn subtle icon-sm">
+          <svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg><span class="label">日期</span>
+        </button>
+        <button id="btnStats" class="btn subtle icon-sm">
+          <svg class="ico" aria-hidden="true"><use href="#i-stats"/></svg><span class="label">统计</span>
+        </button>
+        <button id="btnHelp" class="btn subtle icon" aria-label="帮助与安装说明">
+          <svg class="ico" aria-hidden="true"><use href="#i-help"/></svg>
+        </button>
+      </nav>
+    </header>
+
+    <main class="layout">
+      <section class="challenge panel">
+        <div class="challenge-left">
+          <span id="challengeTag" class="challenge-tag">今日挑战</span>
+          <h1 id="challengeTitle">11月2日 星期一</h1>
+          <p class="challenge-sub">铺满棋盘 只留下月日星期三个格子</p>
+        </div>
+        <div class="metrics">
+          <div class="metric"><span>时间</span><strong id="timer">00:00</strong></div>
+          <div class="metric"><span>步数</span><strong id="moves">0</strong></div>
+          <div class="metric"><span>进度</span><strong id="progress">0/10</strong></div>
+        </div>
+      </section>
+
+      <section class="board-card panel">
+        <div class="board-wrap">
+          <div id="board" class="board" role="grid" aria-label="日历拼图棋盘"></div>
+        </div>
+        <div id="answerBar" class="answer-bar" hidden>
+          <span id="answerText">答案模式</span>
+          <div class="answer-actions">
+            <button id="answerNext" class="mini-btn" type="button">换一种</button>
+            <button id="answerReset" class="mini-btn" type="button">重新开始</button>
+          </div>
+        </div>
+      </section>
+
+      <aside class="tray-card panel">
+        <div class="tray-head">
+          <h2>拼块</h2>
+          <span>点选后点棋盘 或直接拖动</span>
+        </div>
+        <div id="tray" class="tray" aria-label="拼块列表"></div>
+        <p class="tray-foot">旋转翻面作用于选中的拼块</p>
+      </aside>
+    </main>
+
+    <footer class="dock">
+      <div class="dock-inner">
+        <div class="dock-group">
+          <button id="btnUndo" class="dock-btn" type="button" aria-label="撤销">
+            <svg class="ico" aria-hidden="true"><use href="#i-undo"/></svg><span>撤销</span>
+          </button>
+          <button id="btnRedo" class="dock-btn" type="button" aria-label="重做">
+            <svg class="ico" aria-hidden="true"><use href="#i-redo"/></svg><span>重做</span>
+          </button>
+        </div>
+        <div class="dock-group">
+          <button id="btnRotate" class="dock-btn" type="button" aria-label="旋转选中拼块">
+            <svg class="ico" aria-hidden="true"><use href="#i-rotate"/></svg><span>旋转</span>
+          </button>
+          <button id="btnFlip" class="dock-btn" type="button" aria-label="翻面选中拼块">
+            <svg class="ico" aria-hidden="true"><use href="#i-flip"/></svg><span>翻面</span>
+          </button>
+        </div>
+        <div class="dock-group">
+          <button id="btnHint" class="dock-btn" type="button" aria-label="提示">
+            <svg class="ico" aria-hidden="true"><use href="#i-hint"/></svg><span>提示</span>
+          </button>
+          <button id="btnAnswer" class="dock-btn" type="button" aria-label="查看答案">
+            <svg class="ico" aria-hidden="true"><use href="#i-answer"/></svg><span id="answerLabel">看答案</span>
+          </button>
+        </div>
+        <div class="dock-group dock-right">
+          <button id="btnReset" class="dock-btn" type="button" aria-label="重置">
+            <svg class="ico" aria-hidden="true"><use href="#i-reset"/></svg><span>重置</span>
+          </button>
+        </div>
+      </div>
+    </footer>
+  </div>
+
+  <div id="toast" class="toast" aria-live="polite"></div>
+
+  <div id="dateModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="dateModalTitle">
+    <div class="modal-card date-card">
+      <div class="modal-head">
+        <h2 id="dateModalTitle">选择日期</h2>
+        <button class="modal-close" type="button" data-close aria-label="关闭">
+          <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <div class="date-preview">
+        <strong id="datePreview">11月2日 星期一</strong>
+        <span>全部 2604 种组合都有解</span>
+      </div>
+      <div class="date-section">
+        <h3>月份</h3>
+        <div id="monthGrid" class="chips month-chips"></div>
+      </div>
+      <div class="date-section">
+        <h3>日期</h3>
+        <div id="dayGrid" class="chips day-chips"></div>
+      </div>
+      <div class="date-section">
+        <h3>星期</h3>
+        <div id="weekGrid" class="chips week-chips"></div>
+      </div>
+      <p class="date-warning" id="dateWarning">切换日期会开始新的一局 当前进度不保留</p>
+      <div class="modal-actions">
+        <button id="btnToday" class="btn subtle" type="button">今天</button>
+        <button id="btnRandom" class="btn subtle" type="button">随机一天</button>
+        <button id="btnApplyDate" class="btn primary" type="button">开始这一局</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="statsModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="statsModalTitle">
+    <div class="modal-card">
+      <div class="modal-head">
+        <h2 id="statsModalTitle">统计</h2>
+        <button class="modal-close" type="button" data-close aria-label="关闭">
+          <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+      <div id="statsGrid" class="stats-grid"></div>
+      <div class="heatmap-block">
+        <div class="heatmap-title">
+          <h3>最近 8 周</h3>
+          <span>按实际完成的日期记录</span>
+        </div>
+        <div class="heatmap-week"><span>日</span><span>一</span><span>二</span><span>三</span><span>四</span><span>五</span><span>六</span></div>
+        <div id="heatmap" class="heatmap"></div>
+        <p class="hint-text">深色为今日挑战完成 浅色为自由日期完成 空心为未完成</p>
+      </div>
+      <p class="stats-foot" id="statsFoot"></p>
+    </div>
+  </div>
+
+  <div id="helpModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="helpModalTitle">
+    <div class="modal-card help-card">
+      <div class="modal-head">
+        <h2 id="helpModalTitle">玩法与离线使用</h2>
+        <button class="modal-close" type="button" data-close aria-label="关闭">
+          <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
+        </button>
+      </div>
+
+      <section class="help-section">
+        <h3>怎么玩</h3>
+        <p>棋盘是 7 列 × 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
+        <ul>
+          <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
+          <li>点旋转或翻面调整选中拼块的朝向 允许翻面</li>
+          <li>点棋盘上已放置的拼块可以取下 点拼块托盘里的已用拼块也可以取下</li>
+          <li>提示会在当前摆法的基础上给出下一块的位置 看答案会展示一种完整解法 本局不计入连胜</li>
+        </ul>
+      </section>
+
+      <section class="help-section">
+        <h3>安装到 Android</h3>
+        <ol>
+          <li>用 Chrome 打开本页面 首次需要联网</li>
+          <li>点右上角菜单 选择安装应用或添加到主屏幕</li>
+          <li>安装后所有资源都已缓存 之后飞行模式也能直接打开</li>
+        </ol>
+        <p class="help-note">如果找不到安装入口 也可以先正常打开一次 等缓存完成后再断网使用</p>
+      </section>
+
+      <section class="help-section">
+        <h3>安装到 Windows</h3>
+        <ol>
+          <li>用 Chrome 或 Edge 打开本页面</li>
+          <li>点地址栏右侧的安装图标 或菜单里的安装日历拼图</li>
+          <li>安装后会生成桌面快捷方式 离线可直接启动</li>
+        </ol>
+        <p class="help-note">也可以下载单文件离线版 双击即可在浏览器中玩 不需要联网</p>
+        <p class="help-note">当前打开的就是单文件离线版 可以直接复制保存或发送到手机</p>
+      </section>
+
+      <section class="help-section">
+        <h3>说明</h3>
+        <p>标准 10 块星期版共有 12 × 31 × 7 = 2604 种日期组合 已逐一验证全部有解 进度 成绩与统计只保存在本机浏览器里</p>
+      </section>
+    </div>
+  </div>
+
+  <div id="winModal" class="modal" aria-hidden="true" role="dialog" aria-modal="true" aria-labelledby="winTitle">
+    <div class="modal-card win-card">
+      <div id="confetti" class="confetti" aria-hidden="true"></div>
+      <div class="win-check" aria-hidden="true">
+        <svg class="ico" aria-hidden="true"><use href="#i-check"/></svg>
+      </div>
+      <h2 id="winTitle">拼好了</h2>
+      <p id="winSub" class="win-sub">今天的日历拼图完成了</p>
+      <div class="win-stats">
+        <div><span>时间</span><strong id="winTime">00:00</strong></div>
+        <div><span>步数</span><strong id="winMoves">10</strong></div>
+        <div><span>提示</span><strong id="winHints">0</strong></div>
+      </div>
+      <p id="winNote" class="win-note"></p>
+      <div class="modal-actions win-actions">
+        <button id="winReplay" class="btn primary" type="button">再来一局</button>
+        <button id="winDate" class="btn subtle" type="button">换个日期</button>
+        <button id="winStats" class="btn subtle" type="button">看统计</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+(function (global) {
+  'use strict';
+  var CP = global.CP || (global.CP = {});
+
+  CP.W = 7;
+  CP.H = 8;
+  CP.CELLS = CP.W * CP.H;
+
+  // 标准 10 块日历拼图，共 47 格。坐标为归一化后的格点 [row, col]。
+  CP.PIECE_DEFS = [
+    { name: '红', color: '#ef6f6c', cells: [[0,0],[1,0],[2,0],[1,1],[1,2]] },
+    { name: '橙', color: '#f79d65', cells: [[0,0],[0,1],[1,1],[2,1],[2,2]] },
+    { name: '黄', color: '#f4c95d', cells: [[0,0],[1,0],[2,0],[2,1],[2,2]] },
+    { name: '草绿', color: '#a7c957', cells: [[0,0],[0,2],[1,0],[1,1],[1,2]] },
+    { name: '深绿', color: '#43aa8b', cells: [[0,0],[0,1],[1,0],[1,1],[1,2]] },
+    { name: '青', color: '#4cc9f0', cells: [[0,0],[1,0],[1,1],[1,2]] },
+    { name: '蓝', color: '#4361ee', cells: [[0,0],[0,1],[1,1],[1,2]] },
+    { name: '紫', color: '#9b5de5', cells: [[0,0],[0,1],[1,1],[1,2],[1,3]] },
+    { name: '粉', color: '#f15bb5', cells: [[0,0],[1,0],[1,1],[1,2],[1,3]] },
+    { name: '棕', color: '#b08968', cells: [[0,0],[0,1],[0,2],[0,3]] }
+  ];
+
+  CP.WALLS = [[0,6],[1,6],[7,0],[7,1],[7,2],[7,3]];
+
+  // 星期格：索引 0 = Sunday，与 Date.getDay() 一致。
+  CP.WEEK_CELLS = [
+    { label: '日', r: 6, c: 3 },
+    { label: '一', r: 6, c: 4 },
+    { label: '二', r: 6, c: 5 },
+    { label: '三', r: 6, c: 6 },
+    { label: '四', r: 7, c: 4 },
+    { label: '五', r: 7, c: 5 },
+    { label: '六', r: 7, c: 6 }
+  ];
+
+  CP.MONTH_CELLS = [];
+  for (var m = 1; m <= 12; m++) {
+    CP.MONTH_CELLS[m] = {
+      r: Math.floor((m - 1) / 6),
+      c: (m - 1) % 6
+    };
+  }
+
+  CP.DAY_CELLS = [];
+  for (var d = 1; d <= 31; d++) {
+    CP.DAY_CELLS[d] = {
+      r: Math.floor((d - 1) / 7) + 2,
+      c: (d - 1) % 7
+    };
+  }
+
+  CP.idx = function (r, c) { return r * CP.W + c; };
+  CP.rowOf = function (i) { return Math.floor(i / CP.W); };
+  CP.colOf = function (i) { return i % CP.W; };
+
+  CP.normalizeCells = function (cells) {
+    var minR = Infinity, minC = Infinity;
+    for (var i = 0; i < cells.length; i++) {
+      if (cells[i][0] < minR) minR = cells[i][0];
+      if (cells[i][1] < minC) minC = cells[i][1];
+    }
+    var out = cells.map(function (p) { return [p[0] - minR, p[1] - minC]; });
+    out.sort(function (a, b) { return a[0] - b[0] || a[1] - b[1]; });
+    return out;
+  };
+
+  // 翻面（左右镜像）后可再顺时针旋转 rot 次，最后归一化。
+  CP.transformCells = function (baseCells, flip, rot) {
+    var out = baseCells.map(function (p) { return [p[0], flip ? -p[1] : p[1]]; });
+    for (var i = 0; i < (rot || 0); i++) {
+      out = out.map(function (p) { return [p[1], -p[0]]; });
+    }
+    return CP.normalizeCells(out);
+  };
+
+  CP.cellsKey = function (cells) {
+    var parts = [];
+    for (var i = 0; i < cells.length; i++) parts.push(cells[i][0] + ',' + cells[i][1]);
+    return parts.sort().join(';');
+  };
+
+  CP.targetCells = function (m, d, w) {
+    var mc = CP.MONTH_CELLS[m];
+    var dc = CP.DAY_CELLS[d];
+    var wc = CP.WEEK_CELLS[w];
+    if (!mc || !dc || !wc) return null;
+    return [
+      CP.idx(mc.r, mc.c),
+      CP.idx(dc.r, dc.c),
+      CP.idx(wc.r, wc.c)
+    ];
+  };
+
+  CP.dateKey = function (date) {
+    var y = date.getFullYear();
+    var mm = String(date.getMonth() + 1).padStart(2, '0');
+    var dd = String(date.getDate()).padStart(2, '0');
+    return y + '-' + mm + '-' + dd;
+  };
+
+  CP.todayTarget = function () {
+    var now = new Date();
+    return {
+      m: now.getMonth() + 1,
+      d: now.getDate(),
+      w: now.getDay(),
+      key: CP.dateKey(now)
+    };
+  };
+
+  CP.isSameTarget = function (a, b) {
+    return !!a && !!b && a.m === b.m && a.d === b.d && a.w === b.w;
+  };
+})(window);
+
+</script>
+  <script>
+(function (global) {
+  'use strict';
+  var CP = global.CP;
+  var W = CP.W, H = CP.H, N = CP.CELLS;
+
+  function shapeKey(cells) {
+    var parts = [];
+    for (var i = 0; i < cells.length; i++) parts.push(cells[i][0] + ',' + cells[i][1]);
+    parts.sort();
+    return parts.join(';');
+  }
+
+  // 每块拼图去重后的所有朝向（含翻面），供求解器使用。
+  var ORIENTS = CP.PIECE_DEFS.map(function (def) {
+    var seen = {};
+    var list = [];
+    for (var flip = 0; flip < 2; flip++) {
+      for (var rot = 0; rot < 4; rot++) {
+        var cells = CP.transformCells(def.cells, flip, rot);
+        var k = shapeKey(cells);
+        if (!seen[k]) {
+          seen[k] = true;
+          list.push({ cells: cells, flip: flip, rot: rot });
+        }
+      }
+    }
+    return list;
+  });
+
+  function shuffleArray(arr) {
+    for (var i = arr.length - 1; i > 0; i--) {
+      var j = Math.floor(Math.random() * (i + 1));
+      var t = arr[i]; arr[i] = arr[j]; arr[j] = t;
+    }
+    return arr;
+  }
+
+  /**
+   * 求解 / 枚举解法。
+   * targetCells: 月、日、星期三个目标格的下标。
+   * fixed: 已放置的拼块 [{piece, flip, rot, r, c}]，求解时会保留这些拼块。
+   * options: { maxSolutions, timeLimit, shuffle }
+   */
+  function generate(targetCells, fixed, options) {
+    options = options || {};
+    var maxSolutions = options.maxSolutions || 1;
+    var timeLimit = options.timeLimit || 800;
+    var shuffle = !!options.shuffle;
+
+    fixed = fixed || [];
+
+    var covered = new Uint8Array(N);
+    var used = new Uint8Array(10);
+    var chosen = [];
+    var coveredCount = 0;
+
+    for (var i = 0; i < CP.WALLS.length; i++) {
+      var wi = CP.idx(CP.WALLS[i][0], CP.WALLS[i][1]);
+      if (!covered[wi]) { covered[wi] = 1; coveredCount++; }
+    }
+    for (var t = 0; t < targetCells.length; t++) {
+      if (!covered[targetCells[t]]) { covered[targetCells[t]] = 1; coveredCount++; }
+    }
+
+    for (var f = 0; f < fixed.length; f++) {
+      var fp = fixed[f];
+      var fdef = CP.PIECE_DEFS[fp.piece];
+      if (!fdef || used[fp.piece]) return { solutions: [], invalidFixed: true, nodes: 0 };
+      var fcells = CP.transformCells(fdef.cells, fp.flip, fp.rot);
+      var fmask = [];
+      for (var fc = 0; fc < fcells.length; fc++) {
+        var fr = fp.r + fcells[fc][0];
+        var fcc = fp.c + fcells[fc][1];
+        if (fr < 0 || fr >= H || fcc < 0 || fcc >= W) {
+          return { solutions: [], invalidFixed: true, nodes: 0 };
+        }
+        var fi = fr * W + fcc;
+        if (covered[fi]) return { solutions: [], invalidFixed: true, nodes: 0 };
+        fmask.push(fi);
+      }
+      for (var mk = 0; mk < fmask.length; mk++) { covered[fmask[mk]] = 1; coveredCount++; }
+      used[fp.piece] = 1;
+      chosen.push({
+        piece: fp.piece, flip: fp.flip, rot: fp.rot, r: fp.r, c: fp.c,
+        cells: fcells, mask: fmask, fixed: true
+      });
+    }
+
+    var remainingArea = 0;
+    for (var p = 0; p < 10; p++) {
+      if (!used[p]) remainingArea += CP.PIECE_DEFS[p].cells.length;
+    }
+    if (remainingArea !== N - coveredCount) {
+      return { solutions: [], mismatch: true, nodes: 0 };
+    }
+
+    // 为每个格子建立可用的所有摆放。
+    var placements = new Array(N);
+    for (var q = 0; q < N; q++) placements[q] = [];
+
+    for (var pi = 0; pi < 10; pi++) {
+      if (used[pi]) continue;
+      var ors = ORIENTS[pi];
+      for (var oi = 0; oi < ors.length; oi++) {
+        var cells = ors[oi].cells;
+        var maxR = 0, maxC = 0;
+        for (var ci = 0; ci < cells.length; ci++) {
+          if (cells[ci][0] > maxR) maxR = cells[ci][0];
+          if (cells[ci][1] > maxC) maxC = cells[ci][1];
+        }
+        for (var r = 0; r + maxR < H; r++) {
+          for (var c = 0; c + maxC < W; c++) {
+            var ok = true;
+            var mask = [];
+            for (var k = 0; k < cells.length; k++) {
+              var idx = (r + cells[k][0]) * W + (c + cells[k][1]);
+              if (covered[idx]) { ok = false; break; }
+              mask.push(idx);
+            }
+            if (!ok) continue;
+            var pl = {
+              piece: pi, flip: ors[oi].flip, rot: ors[oi].rot,
+              r: r, c: c, cells: cells, mask: mask
+            };
+            for (var mi = 0; mi < mask.length; mi++) placements[mask[mi]].push(pl);
+          }
+        }
+      }
+    }
+
+    if (shuffle) {
+      for (var s = 0; s < N; s++) shuffleArray(placements[s]);
+    }
+
+    var solutions = [];
+    var nodes = 0;
+    var timedOut = false;
+    var deadline = Date.now() + timeLimit;
+
+    function pickCell() {
+      var bestCount = Infinity;
+      var bestCells = [];
+      for (var i = 0; i < N; i++) {
+        if (covered[i]) continue;
+        var cnt = 0;
+        var list = placements[i];
+        for (var j = 0; j < list.length; j++) {
+          if (used[list[j].piece]) continue;
+          var mask = list[j].mask;
+          var fits = true;
+          for (var k = 0; k < mask.length; k++) {
+            if (covered[mask[k]]) { fits = false; break; }
+          }
+          if (fits) cnt++;
+        }
+        if (cnt < bestCount) {
+          bestCount = cnt;
+          bestCells = [i];
+        } else if (cnt === bestCount) {
+          bestCells.push(i);
+        }
+      }
+      if (!bestCells.length) return { cell: -1, count: 0 };
+      if (bestCount === 0) return { cell: bestCells[0], count: 0 };
+      var chosenCell = shuffle
+        ? bestCells[Math.floor(Math.random() * bestCells.length)]
+        : bestCells[0];
+      return { cell: chosenCell, count: bestCount };
+    }
+
+    // 剩余空格若被墙/目标/已放拼块切成过小的连通块，直接剪枝。
+    function componentsOk() {
+      var minArea = Infinity;
+      for (var p = 0; p < 10; p++) {
+        if (!used[p]) {
+          var a = CP.PIECE_DEFS[p].cells.length;
+          if (a < minArea) minArea = a;
+        }
+      }
+      if (minArea === Infinity) return true;
+
+      var seen = new Uint8Array(N);
+      for (var start = 0; start < N; start++) {
+        if (covered[start] || seen[start]) continue;
+        var queue = [start];
+        var head = 0;
+        var size = 0;
+        seen[start] = 1;
+        while (head < queue.length) {
+          var cur = queue[head++];
+          size++;
+          var r = Math.floor(cur / W);
+          var c = cur % W;
+          var nb;
+          if (r > 0) {
+            nb = cur - W;
+            if (!covered[nb] && !seen[nb]) { seen[nb] = 1; queue.push(nb); }
+          }
+          if (r < H - 1) {
+            nb = cur + W;
+            if (!covered[nb] && !seen[nb]) { seen[nb] = 1; queue.push(nb); }
+          }
+          if (c > 0) {
+            nb = cur - 1;
+            if (!covered[nb] && !seen[nb]) { seen[nb] = 1; queue.push(nb); }
+          }
+          if (c < W - 1) {
+            nb = cur + 1;
+            if (!covered[nb] && !seen[nb]) { seen[nb] = 1; queue.push(nb); }
+          }
+        }
+        if (size < minArea) return false;
+      }
+      return true;
+    }
+
+    function dfs() {
+      nodes++;
+      if ((nodes & 63) === 0 && Date.now() > deadline) {
+        timedOut = true;
+        return;
+      }
+
+      var pick = pickCell();
+      if (pick.cell === -1) {
+        solutions.push(chosen.slice());
+        return;
+      }
+      if (pick.count === 0) return;
+      if (!componentsOk()) return;
+
+      var list = placements[pick.cell];
+      for (var i = 0; i < list.length; i++) {
+        if (solutions.length >= maxSolutions || timedOut) return;
+        var pl = list[i];
+        if (used[pl.piece]) continue;
+        var mask = pl.mask;
+        var fits = true;
+        for (var k = 0; k < mask.length; k++) {
+          if (covered[mask[k]]) { fits = false; break; }
+        }
+        if (!fits) continue;
+
+        used[pl.piece] = 1;
+        for (var m1 = 0; m1 < mask.length; m1++) covered[mask[m1]] = 1;
+        chosen.push(pl);
+
+        dfs();
+
+        chosen.pop();
+        for (var m2 = 0; m2 < mask.length; m2++) covered[mask[m2]] = 0;
+        used[pl.piece] = 0;
+      }
+    }
+
+    dfs();
+
+    return {
+      solutions: solutions,
+      nodes: nodes,
+      timedOut: timedOut,
+      exhausted: !timedOut && solutions.length < maxSolutions
+    };
+  }
+
+  function solutionKey(solution) {
+    var parts = solution.map(function (pl) {
+      var cells = pl.mask.slice().sort(function (a, b) { return a - b; });
+      return pl.piece + ':' + cells.join('.');
+    });
+    parts.sort();
+    return parts.join('|');
+  }
+
+  CP.Solver = {
+    orientations: ORIENTS,
+    generate: generate,
+    solutionKey: solutionKey
+  };
+})(window);
+
+</script>
+  <script>
+(function (global) {
+  'use strict';
+  var CP = global.CP;
+  var KEY = 'calendarPuzzle.v1';
+  var memoryFallback = null;
+
+  function defaultStats() {
+    return {
+      wins: 0,
+      dailyWins: 0,
+      viewed: 0,
+      bestMs: null,
+      days: {},
+      dailyDays: {}
+    };
+  }
+
+  function defaultData() {
+    return {
+      version: 1,
+      current: null,
+      stats: defaultStats(),
+      settings: {}
+    };
+  }
+
+  function load() {
+    var raw;
+    try {
+      raw = global.localStorage.getItem(KEY);
+    } catch (e) {
+      raw = null;
+    }
+    if (!raw && memoryFallback) raw = memoryFallback;
+    if (!raw) return defaultData();
+    try {
+      var data = JSON.parse(raw);
+      if (!data || typeof data !== 'object') return defaultData();
+      return {
+        version: data.version || 1,
+        current: data.current || null,
+        stats: Object.assign(defaultStats(), data.stats || {}),
+        settings: data.settings || {}
+      };
+    } catch (e) {
+      return defaultData();
+    }
+  }
+
+  function save(data) {
+    var payload = JSON.stringify(data);
+    memoryFallback = payload;
+    try {
+      global.localStorage.setItem(KEY, payload);
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  function parseKey(key) {
+    var parts = key.split('-');
+    return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+  }
+
+  function addDays(date, n) {
+    var d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+    d.setDate(d.getDate() + n);
+    return d;
+  }
+
+  function computeStreak(dailyDays, todayKey) {
+    var cursor = parseKey(todayKey);
+    if (!dailyDays[todayKey]) cursor = addDays(cursor, -1);
+    var streak = 0;
+    while (dailyDays[CP.dateKey(cursor)]) {
+      streak++;
+      cursor = addDays(cursor, -1);
+    }
+    return streak;
+  }
+
+  // 返回 true 表示这是当天第一次完成。
+  function recordWin(stats, key, entry, isDaily) {
+    var isNew = !stats.days[key];
+    if (isNew) {
+      stats.days[key] = entry;
+      stats.wins = (stats.wins || 0) + 1;
+    }
+    if (isDaily && !stats.dailyDays[key]) {
+      stats.dailyDays[key] = entry;
+      stats.dailyWins = (stats.dailyWins || 0) + 1;
+    }
+    if (stats.bestMs == null || entry.ms < stats.bestMs) stats.bestMs = entry.ms;
+    return isNew;
+  }
+
+  function formatDuration(ms) {
+    if (ms == null || isNaN(ms)) return '—';
+    var total = Math.max(0, Math.round(ms / 1000));
+    var h = Math.floor(total / 3600);
+    var m = Math.floor((total - h * 3600) / 60);
+    var s = total % 60;
+    if (h > 0) return h + ':' + String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+    return String(m).padStart(2, '0') + ':' + String(s).padStart(2, '0');
+  }
+
+  CP.Storage = {
+    load: load,
+    save: save,
+    defaultStats: defaultStats,
+    computeStreak: computeStreak,
+    recordWin: recordWin,
+    formatDuration: formatDuration,
+    dateKey: CP.dateKey,
+    addDays: addDays
+  };
+})(window);
+
+</script>
+  <script>
+(function (global) {
+  'use strict';
+  var CP = global.CP;
+
+  function $(id) { return document.getElementById(id); }
+
+  function copyList(list) {
+    return list.map(function (p) {
+      return { piece: p.piece, flip: p.flip, rot: p.rot, r: p.r, c: p.c };
+    });
+  }
+
+  function Game(options) {
+    this.opts = options || {};
+    this.board = $('board');
+    this.tray = $('tray');
+    this.timerEl = $('timer');
+    this.movesEl = $('moves');
+    this.progressEl = $('progress');
+    this.tagEl = $('challengeTag');
+    this.titleEl = $('challengeTitle');
+    this.toastEl = $('toast');
+    this.answerBar = $('answerBar');
+    this.answerText = $('answerText');
+    this.answerNextBtn = $('answerNext');
+    this.answerResetBtn = $('answerReset');
+    this.undoBtn = $('btnUndo');
+    this.redoBtn = $('btnRedo');
+    this.rotateBtn = $('btnRotate');
+    this.flipBtn = $('btnFlip');
+    this.resetBtn = $('btnReset');
+    this.hintBtn = $('btnHint');
+    this.answerBtn = $('btnAnswer');
+    this.answerLabel = $('answerLabel');
+
+    this.data = CP.Storage.load();
+    this.stats = this.data.stats || CP.Storage.defaultStats();
+
+    var today = CP.todayTarget();
+    this.target = { m: today.m, d: today.d, w: today.w };
+    this.playDayKey = today.key;
+
+    this.placements = [];
+    this.pieceStates = [];
+    for (var i = 0; i < 10; i++) this.pieceStates.push({ flip: 0, rot: 0 });
+
+    this.selected = null;
+    this.moves = 0;
+    this.hints = 0;
+    this.revealed = false;
+    this.revealCounted = false;
+    this.won = false;
+    this.answerMode = false;
+    this.answers = [];
+    this.answerKeys = {};
+    this.answerIdx = 0;
+    this.answerFromScratch = false;
+    this.hint = null;
+    this.hintSolution = null;
+    this.hintedPieces = {};
+    this.lastWinInfo = null;
+
+    this.timer = { running: false, elapsed: 0, last: 0 };
+    this.undoStack = [];
+    this.redoStack = [];
+
+    this.drag = null;
+    this.ghost = null;
+    this.preview = null;
+    this.suppressClickUntil = 0;
+    this.toastTimer = null;
+    this.pieceLayerEls = {};
+    this.piecesLayer = null;
+    this.prevPieceSet = {};
+
+    this.rebuildBlocked();
+    this.buildBoard();
+    this.buildTray();
+    this.bindEvents();
+    this.restoreOrStart();
+    this.renderAll();
+    this.save();
+
+    var self = this;
+    this.timerId = setInterval(function () { self.tick(); }, 1000);
+  }
+
+  Game.prototype = {
+    // ---------- 基础数据 ----------
+    rebuildBlocked: function () {
+      this.blocked = new Uint8Array(56);
+      this.wallMask = new Uint8Array(56);
+      for (var i = 0; i < CP.WALLS.length; i++) {
+        var wi = CP.idx(CP.WALLS[i][0], CP.WALLS[i][1]);
+        this.blocked[wi] = 1;
+        this.wallMask[wi] = 1;
+      }
+      var monthCell = CP.MONTH_CELLS[this.target.m];
+      var dayCell = CP.DAY_CELLS[this.target.d];
+      var weekCell = CP.WEEK_CELLS[this.target.w];
+      var mi = CP.idx(monthCell.r, monthCell.c);
+      var di = CP.idx(dayCell.r, dayCell.c);
+      var wi2 = CP.idx(weekCell.r, weekCell.c);
+      this.blocked[mi] = 1;
+      this.blocked[di] = 1;
+      this.blocked[wi2] = 1;
+
+      this.targetInfo = {};
+      this.targetInfo[mi] = { kind: 'month', sub: '月', main: String(this.target.m) };
+      this.targetInfo[di] = { kind: 'day', sub: '日', main: String(this.target.d) };
+      this.targetInfo[wi2] = { kind: 'week', sub: '星期', main: weekCell.label };
+    },
+
+    targetCells: function () {
+      return CP.targetCells(this.target.m, this.target.d, this.target.w);
+    },
+
+    isValidTarget: function (t) {
+      return !!t &&
+        Number.isInteger(t.m) && t.m >= 1 && t.m <= 12 &&
+        Number.isInteger(t.d) && t.d >= 1 && t.d <= 31 &&
+        Number.isInteger(t.w) && t.w >= 0 && t.w <= 6;
+    },
+
+    isTodayChallenge: function () {
+      var now = new Date();
+      return this.target.m === now.getMonth() + 1 &&
+        this.target.d === now.getDate() &&
+        this.target.w === now.getDay();
+    },
+
+    cellsOfPlacement: function (pl) {
+      if (pl.mask) return pl.mask;
+      var def = CP.PIECE_DEFS[pl.piece];
+      var cells = CP.transformCells(def.cells, pl.flip, pl.rot);
+      var out = [];
+      for (var i = 0; i < cells.length; i++) {
+        out.push(CP.idx(pl.r + cells[i][0], pl.c + cells[i][1]));
+      }
+      return out;
+    },
+
+    colorOf: function (piece) {
+      return CP.PIECE_DEFS[piece] ? CP.PIECE_DEFS[piece].color : '#999';
+    },
+
+    // ---------- 初始化与恢复 ----------
+    restoreOrStart: function () {
+      var cur = this.data.current;
+      var today = CP.todayTarget();
+      if (cur && this.isValidTarget(cur.target)) {
+        if (cur.won && cur.playDay && cur.playDay !== today.key) {
+          this.startNew(today, { skipSave: true });
+          return;
+        }
+        this.restore(cur);
+        return;
+      }
+      this.startNew(today, { skipSave: true });
+    },
+
+    restore: function (cur) {
+      this.target = { m: cur.target.m, d: cur.target.d, w: cur.target.w };
+      this.playDayKey = cur.playDay || CP.dateKey(new Date());
+      this.rebuildBlocked();
+
+      var savedStates = Array.isArray(cur.pieceStates) ? cur.pieceStates : [];
+      this.pieceStates = [];
+      for (var i = 0; i < 10; i++) {
+        var st = savedStates[i] || {};
+        this.pieceStates.push({
+          flip: st.flip ? 1 : 0,
+          rot: ((Number(st.rot) || 0) % 4 + 4) % 4
+        });
+      }
+
+      var occupied = new Uint8Array(56);
+      var used = new Uint8Array(10);
+      var valid = [];
+      var self = this;
+      var list = Array.isArray(cur.placements) ? cur.placements : [];
+      list.forEach(function (pl) {
+        if (!pl || !Number.isInteger(pl.piece) || pl.piece < 0 || pl.piece > 9) return;
+        if (used[pl.piece]) return;
+        if (pl.flip !== 0 && pl.flip !== 1) return;
+        if (!Number.isInteger(pl.rot) || pl.rot < 0 || pl.rot > 3) return;
+        if (!Number.isInteger(pl.r) || !Number.isInteger(pl.c)) return;
+        var cells = CP.transformCells(CP.PIECE_DEFS[pl.piece].cells, pl.flip, pl.rot);
+        var mask = [];
+        for (var k = 0; k < cells.length; k++) {
+          var r = pl.r + cells[k][0];
+          var c = pl.c + cells[k][1];
+          if (r < 0 || r >= CP.H || c < 0 || c >= CP.W) return;
+          var idx = CP.idx(r, c);
+          if (self.blocked[idx] || occupied[idx]) return;
+          mask.push(idx);
+        }
+        for (var m = 0; m < mask.length; m++) occupied[mask[m]] = 1;
+        used[pl.piece] = 1;
+        valid.push({ piece: pl.piece, flip: pl.flip, rot: pl.rot, r: pl.r, c: pl.c });
+      });
+
+      this.placements = valid;
+      this.moves = Math.max(valid.length, Number(cur.moves) || 0);
+      this.hints = Math.max(0, Number(cur.hints) || 0);
+      this.revealed = !!cur.revealed;
+      this.revealCounted = this.revealed;
+      this.won = !!cur.won && valid.length === 10;
+      this.answerMode = false;
+      this.answers = [];
+      this.answerKeys = {};
+      this.answerIdx = 0;
+      this.answerFromScratch = false;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.selected = null;
+      this.undoStack = [];
+      this.redoStack = [];
+
+      var elapsed = Number(cur.elapsed);
+      this.timer = { running: false, elapsed: isFinite(elapsed) ? Math.max(0, elapsed) : 0, last: 0 };
+      if (!this.won && (valid.length > 0 || cur.started)) this.startTimer();
+
+      this.buildBoard();
+    },
+
+    startNew: function (target, opts) {
+      opts = opts || {};
+      this.target = { m: target.m, d: target.d, w: target.w };
+      this.playDayKey = CP.dateKey(new Date());
+      this.placements = [];
+      this.pieceStates = [];
+      for (var i = 0; i < 10; i++) this.pieceStates.push({ flip: 0, rot: 0 });
+      this.selected = null;
+      this.moves = 0;
+      this.hints = 0;
+      this.revealed = false;
+      this.revealCounted = false;
+      this.won = false;
+      this.answerMode = false;
+      this.answers = [];
+      this.answerKeys = {};
+      this.answerIdx = 0;
+      this.answerFromScratch = false;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.lastWinInfo = null;
+      this.undoStack = [];
+      this.redoStack = [];
+      this.timer = { running: false, elapsed: 0, last: 0 };
+      this.endDrag();
+      this.rebuildBlocked();
+      this.buildBoard();
+      if (!opts.skipSave) {
+        this.renderAll();
+        this.save();
+      }
+    },
+
+    // ---------- DOM ----------
+    buildBoard: function () {
+      this.board.innerHTML = '';
+      this.cellEls = new Array(56);
+      var frag = document.createDocumentFragment();
+      for (var r = 0; r < CP.H; r++) {
+        for (var c = 0; c < CP.W; c++) {
+          var idx = CP.idx(r, c);
+          var el = document.createElement('div');
+          el.className = 'cell';
+          el.style.gridRow = String(r + 1);
+          el.style.gridColumn = String(c + 1);
+          el.dataset.idx = String(idx);
+          el.dataset.r = String(r);
+          el.dataset.c = String(c);
+          el.style.setProperty('--i', String(r + c));
+
+          if (this.wallMask[idx]) {
+            el.classList.add('wall');
+            el.setAttribute('aria-hidden', 'true');
+          } else if (this.targetInfo[idx]) {
+            var info = this.targetInfo[idx];
+            el.classList.add('target', info.kind);
+            var sub = document.createElement('span');
+            sub.className = 'cell-sub';
+            sub.textContent = info.sub;
+            var main = document.createElement('span');
+            main.className = 'cell-main';
+            main.textContent = info.main;
+            el.appendChild(sub);
+            el.appendChild(main);
+            el.setAttribute('aria-label', info.sub === '星期' ? '星期' + info.main : info.sub + info.main);
+          } else {
+            el.classList.add('empty');
+            el.setAttribute('aria-hidden', 'true');
+          }
+          this.cellEls[idx] = el;
+          frag.appendChild(el);
+        }
+      }
+      this.board.appendChild(frag);
+
+      var layer = document.createElement('div');
+      layer.className = 'piece-layer';
+      layer.setAttribute('aria-hidden', 'true');
+      this.board.appendChild(layer);
+      this.piecesLayer = layer;
+      this.pieceLayerEls = {};
+      this.prevPieceSet = {};
+    },
+
+    // 把一块拼图画成完整剪影：相邻格互相补缝，只在真正的轮廓上做圆角
+    shapeLayer: function (piece, flip, rot, r, c, opts) {
+      opts = opts || {};
+      var def = CP.PIECE_DEFS[piece];
+      var cells = CP.transformCells(def.cells, flip, rot);
+      var map = {};
+      var maxR = 0, maxC = 0;
+      for (var i = 0; i < cells.length; i++) {
+        map[cells[i][0] + ',' + cells[i][1]] = 1;
+        if (cells[i][0] > maxR) maxR = cells[i][0];
+        if (cells[i][1] > maxC) maxC = cells[i][1];
+      }
+      var w = maxC + 1, h = maxR + 1;
+
+      var layer = document.createElement('div');
+      layer.className = 'piece' + (opts.className ? ' ' + opts.className : '');
+      layer.style.width = 'calc(var(--cell) * ' + w + ' + var(--gap) * ' + (w - 1) + ')';
+      layer.style.height = 'calc(var(--cell) * ' + h + ' + var(--gap) * ' + (h - 1) + ')';
+      layer.style.left = 'calc(var(--cell) * ' + c + ' + var(--gap) * ' + c + ')';
+      layer.style.top = 'calc(var(--cell) * ' + r + ' + var(--gap) * ' + r + ')';
+      layer.style.setProperty('--piece-color', def.color);
+
+      for (var k = 0; k < cells.length; k++) {
+        var lr = cells[k][0], lc = cells[k][1];
+        var up = map[(lr - 1) + ',' + lc];
+        var down = map[(lr + 1) + ',' + lc];
+        var left = map[lr + ',' + (lc - 1)];
+        var right = map[lr + ',' + (lc + 1)];
+
+        var sub = document.createElement('span');
+        sub.className = 'piece-cell';
+        sub.style.left = 'calc(var(--cell) * ' + lc + ' + var(--gap) * ' + lc + ')';
+        sub.style.top = 'calc(var(--cell) * ' + lr + ' + var(--gap) * ' + lr + ')';
+        sub.style.width = right ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
+        sub.style.height = down ? 'calc(var(--cell) + var(--gap))' : 'var(--cell)';
+        sub.style.borderRadius = [
+          (!up && !left) ? 'var(--piece-r)' : '0',
+          (!up && !right) ? 'var(--piece-r)' : '0',
+          (!down && !right) ? 'var(--piece-r)' : '0',
+          (!down && !left) ? 'var(--piece-r)' : '0'
+        ].join(' ');
+        sub.style.background = opts.color || def.color;
+
+        if (!opts.flat) {
+          var shadow = [];
+          if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
+          if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
+          if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
+          if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
+          if (shadow.length) sub.style.boxShadow = shadow.join(', ');
+        }
+        layer.appendChild(sub);
+      }
+      return layer;
+    },
+
+    buildTray: function () {
+      this.tray.innerHTML = '';
+      this.pieceEls = [];
+      for (var i = 0; i < 10; i++) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'tray-piece';
+        btn.dataset.piece = String(i);
+        btn.style.setProperty('--ti', String(i));
+        var mini = document.createElement('span');
+        mini.className = 'mini';
+        var num = document.createElement('span');
+        num.className = 'tray-num';
+        num.textContent = String(i + 1);
+        btn.appendChild(mini);
+        btn.appendChild(num);
+        this.tray.appendChild(btn);
+        this.pieceEls.push(btn);
+      }
+    },
+
+    bindEvents: function () {
+      var self = this;
+
+      this.tray.addEventListener('pointerdown', function (e) { self.onTrayPointerDown(e); });
+      this.tray.addEventListener('click', function (e) {
+        if (e.detail !== 0) return;
+        var btn = e.target.closest && e.target.closest('.tray-piece');
+        if (!btn) return;
+        var piece = Number(btn.dataset.piece);
+        if (self.isPiecePlaced(piece)) self.removePiece(piece);
+        else self.selectPiece(piece);
+      });
+
+      global.addEventListener('pointermove', function (e) { self.onPointerMove(e); }, { passive: false });
+      global.addEventListener('pointerup', function (e) { self.onPointerUp(e); });
+      global.addEventListener('pointercancel', function (e) { self.onPointerCancel(e); });
+
+      this.board.addEventListener('click', function (e) { self.onBoardClick(e); });
+      this.board.addEventListener('pointermove', function (e) { self.onBoardPointerMove(e); });
+      this.board.addEventListener('pointerleave', function () { self.clearPreview(); });
+
+      this.undoBtn.addEventListener('click', function () { self.undo(); });
+      this.redoBtn.addEventListener('click', function () { self.redo(); });
+      this.rotateBtn.addEventListener('click', function () { self.rotateSelected(); });
+      this.flipBtn.addEventListener('click', function () { self.flipSelected(); });
+      this.resetBtn.addEventListener('click', function () { self.reset(); });
+      this.hintBtn.addEventListener('click', function () { self.useHint(); });
+      this.answerBtn.addEventListener('click', function () { self.showAnswer(); });
+      this.answerNextBtn.addEventListener('click', function () { self.nextAnswer(); });
+      this.answerResetBtn.addEventListener('click', function () { self.reset(); });
+
+      document.addEventListener('visibilitychange', function () {
+        if (document.hidden) {
+          self.stopTimer();
+          self.save();
+        } else if (!self.won && !self.answerMode && (self.placements.length || self.timer.elapsed > 0)) {
+          self.startTimer();
+        }
+      });
+      global.addEventListener('beforeunload', function () { self.save(); });
+    },
+
+    // ---------- 渲染 ----------
+    renderAll: function () {
+      this.renderChallenge();
+      this.renderBoardState();
+      this.renderTray();
+      this.renderMetrics();
+      this.renderAnswerBar();
+      this.renderControls();
+    },
+
+    renderChallenge: function () {
+      var week = CP.WEEK_CELLS[this.target.w];
+      var title = this.target.m + '月' + this.target.d + '日 星期' + week.label;
+      if (this.titleEl.textContent !== title) {
+        this.titleEl.textContent = title;
+        this.titleEl.classList.remove('swap');
+        void this.titleEl.offsetWidth;
+        this.titleEl.classList.add('swap');
+      }
+      var daily = this.isTodayChallenge();
+      var tag = this.won ? (daily ? '今日已完成' : '已完成') : (daily ? '今日挑战' : '自由模式');
+      if (this.tagEl.textContent !== tag) {
+        this.tagEl.textContent = tag;
+        this.tagEl.classList.remove('pop');
+        void this.tagEl.offsetWidth;
+        this.tagEl.classList.add('pop');
+      }
+      this.tagEl.classList.toggle('done', this.won);
+      this.tagEl.classList.toggle('free', !daily && !this.won);
+    },
+
+    renderBoardState: function () {
+      var i;
+      for (i = 0; i < 56; i++) {
+        var el = this.cellEls[i];
+        el.classList.remove('preview-valid', 'preview-invalid');
+        el.style.removeProperty('--piece-color');
+      }
+
+      if (!this.piecesLayer) return;
+      this.piecesLayer.innerHTML = '';
+      this.pieceLayerEls = {};
+
+      this.placedByIndex = new Int8Array(56);
+      this.placedByIndex.fill(-1);
+
+      var shown = this.answerMode ? (this.answers[this.answerIdx] || []) : this.placements;
+      var prevSet = this.prevPieceSet || {};
+      this.shownPieceSet = {};
+
+      for (i = 0; i < shown.length; i++) {
+        var pl = shown[i];
+        var layer = this.shapeLayer(pl.piece, pl.flip, pl.rot, pl.r, pl.c, {
+          className: this.answerMode ? 'answer-piece' : ''
+        });
+        if (this.answerMode) {
+          layer.classList.add('reveal-piece');
+          layer.style.animationDelay = (i * 34) + 'ms';
+        } else if (!prevSet[pl.piece]) {
+          layer.classList.add('enter');
+          layer.style.animationDelay = (120 + i * 26) + 'ms';
+        }
+        this.piecesLayer.appendChild(layer);
+        this.pieceLayerEls[pl.piece] = layer;
+        this.shownPieceSet[pl.piece] = true;
+      }
+      this.prevPieceSet = this.shownPieceSet;
+
+      for (i = 0; i < this.placements.length; i++) {
+        var p = this.placements[i];
+        var pCells = this.cellsOfPlacement(p);
+        for (var j = 0; j < pCells.length; j++) this.placedByIndex[pCells[j]] = p.piece;
+      }
+
+      if (!this.answerMode && this.hint) {
+        var hintLayer = this.shapeLayer(this.hint.piece, this.hint.flip, this.hint.rot, this.hint.r, this.hint.c, {
+          className: 'hint-piece',
+          flat: true,
+          color: this.colorOf(this.hint.piece)
+        });
+        this.piecesLayer.appendChild(hintLayer);
+      }
+
+      if (!this.answerMode && this.preview && this.preview.cells) {
+        for (i = 0; i < this.preview.cells.length; i++) {
+          var pc = this.cellEls[this.preview.cells[i]];
+          if (pc) pc.classList.add(this.preview.valid ? 'preview-valid' : 'preview-invalid');
+        }
+      }
+
+      this.board.classList.toggle('locked', this.won || this.answerMode);
+    },
+
+    renderTray: function () {
+      for (var i = 0; i < 10; i++) {
+        var btn = this.pieceEls[i];
+        var placed = !!this.shownPieceSet[i];
+        var selected = !placed && this.selected === i && !this.answerMode && !this.won;
+        btn.classList.toggle('placed', placed);
+        btn.classList.toggle('selected', selected);
+        btn.classList.toggle('hinting', !placed && !!(this.hint && this.hint.piece === i));
+        btn.setAttribute('aria-label', CP.PIECE_DEFS[i].name + '拼块' + (placed ? ' 已放置' : ''));
+        this.buildMini(btn, i);
+      }
+    },
+
+    buildMini: function (btn, piece) {
+      var mini = btn.querySelector('.mini');
+      var state = this.pieceStates[piece];
+      var cells = CP.transformCells(CP.PIECE_DEFS[piece].cells, state.flip, state.rot);
+      var map = {};
+      var maxR = 0, maxC = 0;
+      for (var i = 0; i < cells.length; i++) {
+        map[cells[i][0] + ',' + cells[i][1]] = 1;
+        if (cells[i][0] > maxR) maxR = cells[i][0];
+        if (cells[i][1] > maxC) maxC = cells[i][1];
+      }
+      var w = maxC + 1, h = maxR + 1;
+      mini.innerHTML = '';
+      mini.style.width = 'calc(var(--mini) * ' + w + ' + ' + ((w - 1) * 2) + 'px)';
+      mini.style.height = 'calc(var(--mini) * ' + h + ' + ' + ((h - 1) * 2) + 'px)';
+      for (var k = 0; k < cells.length; k++) {
+        var lr = cells[k][0], lc = cells[k][1];
+        var up = map[(lr - 1) + ',' + lc];
+        var down = map[(lr + 1) + ',' + lc];
+        var left = map[lr + ',' + (lc - 1)];
+        var right = map[lr + ',' + (lc + 1)];
+
+        var dot = document.createElement('span');
+        dot.className = 'mini-cell';
+        dot.style.left = 'calc(var(--mini) * ' + lc + ' + ' + (lc * 2) + 'px)';
+        dot.style.top = 'calc(var(--mini) * ' + lr + ' + ' + (lr * 2) + 'px)';
+        dot.style.width = right ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
+        dot.style.height = down ? 'calc(var(--mini) + 2px)' : 'var(--mini)';
+        dot.style.borderRadius = [
+          (!up && !left) ? 'var(--mini-r)' : '0',
+          (!up && !right) ? 'var(--mini-r)' : '0',
+          (!down && !right) ? 'var(--mini-r)' : '0',
+          (!down && !left) ? 'var(--mini-r)' : '0'
+        ].join(' ');
+        dot.style.backgroundColor = CP.PIECE_DEFS[piece].color;
+        mini.appendChild(dot);
+      }
+    },
+
+    setMetric: function (el, value) {
+      if (!el || el.textContent === value) return;
+      el.textContent = value;
+      el.classList.remove('bump');
+      void el.offsetWidth;
+      el.classList.add('bump');
+    },
+
+    renderMetrics: function () {
+      this.timerEl.textContent = CP.Storage.formatDuration(this.getElapsed());
+      this.setMetric(this.movesEl, String(this.moves));
+      this.setMetric(this.progressEl, (this.answerMode ? 10 : this.placements.length) + '/10');
+    },
+
+    renderAnswerBar: function () {
+      this.answerBar.hidden = !this.answerMode;
+      if (!this.answerMode) return;
+      var prefix = this.answerFromScratch
+        ? '当前摆法无解 已展示初始布局的答案'
+        : '答案模式 本局不计入连胜';
+      this.answerText.textContent = prefix + ' 第 ' + (this.answerIdx + 1) + '/' + this.answers.length + ' 种';
+    },
+
+    renderControls: function () {
+      var locked = this.won || this.answerMode;
+      this.undoBtn.disabled = locked || this.undoStack.length === 0;
+      this.redoBtn.disabled = locked || this.redoStack.length === 0;
+      this.rotateBtn.disabled = locked || this.selected === null;
+      this.flipBtn.disabled = locked || this.selected === null;
+      this.hintBtn.disabled = locked;
+      this.answerBtn.disabled = locked;
+      if (this.answerLabel) this.answerLabel.textContent = this.answerMode ? '答案中' : '看答案';
+    },
+
+    // ---------- 计时 ----------
+    startTimer: function () {
+      if (this.won || this.answerMode) return;
+      if (!this.timer.running) {
+        this.timer.running = true;
+        this.timer.last = Date.now();
+      }
+    },
+
+    stopTimer: function () {
+      if (this.timer.running) {
+        this.timer.elapsed += Date.now() - this.timer.last;
+        this.timer.running = false;
+        this.timer.last = 0;
+      }
+    },
+
+    getElapsed: function () {
+      return this.timer.elapsed + (this.timer.running ? Date.now() - this.timer.last : 0);
+    },
+
+    tick: function () {
+      if (!this.timer.running) return;
+      var now = Date.now();
+      this.timer.elapsed += now - this.timer.last;
+      this.timer.last = now;
+      this.timerEl.textContent = CP.Storage.formatDuration(this.timer.elapsed);
+    },
+
+    // ---------- 历史 ----------
+    snapshot: function () {
+      return {
+        placements: copyList(this.placements),
+        pieceStates: this.pieceStates.map(function (s) { return { flip: s.flip, rot: s.rot }; })
+      };
+    },
+
+    pushHistory: function () {
+      this.undoStack.push(this.snapshot());
+      if (this.undoStack.length > 100) this.undoStack.shift();
+      this.redoStack = [];
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+    },
+
+    applySnapshot: function (snap) {
+      this.placements = copyList(snap.placements);
+      this.pieceStates = snap.pieceStates.map(function (s) { return { flip: s.flip, rot: s.rot }; });
+      this.selected = null;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.preview = null;
+    },
+
+    undo: function () {
+      if (this.won || this.answerMode || !this.undoStack.length) return;
+      this.redoStack.push(this.snapshot());
+      this.applySnapshot(this.undoStack.pop());
+      this.renderAll();
+      this.save();
+    },
+
+    redo: function () {
+      if (this.won || this.answerMode || !this.redoStack.length) return;
+      this.undoStack.push(this.snapshot());
+      this.applySnapshot(this.redoStack.pop());
+      this.renderAll();
+      this.save();
+    },
+
+    // ---------- 放置 ----------
+    rowsOfPiece: function (piece, flip, rot) {
+      return CP.transformCells(CP.PIECE_DEFS[piece].cells, flip, rot);
+    },
+
+    validCells: function (piece, flip, rot, r, c, ignorePiece) {
+      var cells = CP.transformCells(CP.PIECE_DEFS[piece].cells, flip, rot);
+      var mask = [];
+      for (var i = 0; i < cells.length; i++) {
+        var rr = r + cells[i][0];
+        var cc = c + cells[i][1];
+        if (rr < 0 || rr >= CP.H || cc < 0 || cc >= CP.W) return null;
+        var idx = CP.idx(rr, cc);
+        if (this.blocked[idx]) return null;
+        var occ = this.placedByIndex[idx];
+        if (occ >= 0 && occ !== ignorePiece) return null;
+        mask.push(idx);
+      }
+      return mask;
+    },
+
+    isPiecePlaced: function (piece) {
+      for (var i = 0; i < this.placements.length; i++) {
+        if (this.placements[i].piece === piece) return true;
+      }
+      return false;
+    },
+
+    trayPieceRect: function (piece) {
+      var btn = this.pieceEls && this.pieceEls[piece];
+      var mini = btn && btn.querySelector('.mini');
+      if (!mini) return null;
+      var rect = mini.getBoundingClientRect();
+      if (!rect.width || !rect.height) return null;
+      return rect;
+    },
+
+    placePiece: function (piece, flip, rot, r, c, opts) {
+      opts = opts || {};
+      if (this.won || this.answerMode) return false;
+      var mask = this.validCells(piece, flip, rot, r, c, null);
+      if (!mask) return false;
+      if (this.isPiecePlaced(piece)) return false;
+
+      var fromRect = opts.fromRect || this.trayPieceRect(piece);
+
+      this.pushHistory();
+      this.placements.push({ piece: piece, flip: flip, rot: rot, r: r, c: c });
+      this.moves++;
+      this.selected = null;
+      this.startTimer();
+      this.renderAll();
+      this.animatePieceMorph(piece, fromRect, opts.duration);
+      this.save();
+
+      if (navigator.vibrate) {
+        try { navigator.vibrate(12); } catch (e) { /* ignore */ }
+      }
+      if (this.placements.length === 10) this.win();
+      return true;
+    },
+
+    animatePieceMorph: function (piece, fromRect, duration) {
+      var layer = this.pieceLayerEls[piece];
+      if (!layer) return;
+      layer.classList.remove('enter');
+      layer.style.animationDelay = '0ms';
+      if (!fromRect || !layer.animate) return;
+      var target = layer.getBoundingClientRect();
+      if (!target.width || !target.height) return;
+      var scale = Math.max(0.2, Math.min(1.45, fromRect.width / target.width));
+      var dx = fromRect.left - target.left;
+      var dy = fromRect.top - target.top;
+      layer.style.transformOrigin = '0 0';
+      layer.animate([
+        {
+          transform: 'translate(' + dx + 'px,' + dy + 'px) scale(' + scale + ')',
+          opacity: 0.45,
+          offset: 0
+        },
+        { transform: 'translate(0,0) scale(1.05)', opacity: 1, offset: 0.72 },
+        { transform: 'translate(0,0) scale(1)', opacity: 1, offset: 1 }
+      ], {
+        duration: duration || 420,
+        easing: 'cubic-bezier(.22,.9,.24,1)'
+      });
+    },
+
+    findTapAnchor: function (piece, targetIdx) {
+      var state = this.pieceStates[piece];
+      var cells = CP.transformCells(CP.PIECE_DEFS[piece].cells, state.flip, state.rot);
+      var tr = Math.floor(targetIdx / CP.W);
+      var tc = targetIdx % CP.W;
+      var candidates = [];
+      for (var i = 0; i < cells.length; i++) {
+        var r = tr - cells[i][0];
+        var c = tc - cells[i][1];
+        if (this.validCells(piece, state.flip, state.rot, r, c, piece)) {
+          candidates.push({ r: r, c: c, dist: Math.abs(r - tr) + Math.abs(c - tc) });
+        }
+      }
+      if (!candidates.length) return null;
+      candidates.sort(function (a, b) { return a.dist - b.dist; });
+      return candidates[0];
+    },
+
+    removePiece: function (piece) {
+      if (this.won || this.answerMode) return;
+      if (!this.isPiecePlaced(piece)) return;
+      var old = this.pieceLayerEls[piece];
+      var outLayer = old ? old.cloneNode(true) : null;
+      this.pushHistory();
+      this.placements = this.placements.filter(function (p) { return p.piece !== piece; });
+      this.selected = piece;
+      this.renderAll();
+      if (outLayer && outLayer.animate && this.piecesLayer) {
+        outLayer.classList.remove('enter', 'answer-piece', 'reveal-piece', 'hint-piece');
+        outLayer.classList.add('out');
+        outLayer.style.animationDelay = '0ms';
+        this.piecesLayer.appendChild(outLayer);
+        var anim = outLayer.animate([
+          { opacity: 1, transform: 'scale(1)' },
+          { opacity: 0, transform: 'scale(0.86)' }
+        ], { duration: 200, easing: 'cubic-bezier(.4,0,.7,1)' });
+        anim.onfinish = function () {
+          if (outLayer.parentNode) outLayer.parentNode.removeChild(outLayer);
+        };
+      }
+      this.save();
+    },
+
+    selectPiece: function (piece) {
+      if (this.won || this.answerMode) return;
+      this.selected = piece;
+      this.renderTray();
+      this.renderControls();
+    },
+
+    rotateSelected: function () {
+      if (this.won || this.answerMode || this.selected === null) return;
+      this.pieceStates[this.selected].rot = (this.pieceStates[this.selected].rot + 1) % 4;
+      this.renderTray();
+      this.save();
+    },
+
+    flipSelected: function () {
+      if (this.won || this.answerMode || this.selected === null) return;
+      this.pieceStates[this.selected].flip = this.pieceStates[this.selected].flip ? 0 : 1;
+      this.renderTray();
+      this.save();
+    },
+
+    // ---------- 拖拽 ----------
+    onTrayPointerDown: function (e) {
+      if (e.button !== undefined && e.button !== 0) return;
+      if (this.won || this.answerMode) return;
+      var btn = e.target.closest && e.target.closest('.tray-piece');
+      if (!btn) return;
+      var piece = Number(btn.dataset.piece);
+      if (this.isPiecePlaced(piece)) {
+        this.removePiece(piece);
+        return;
+      }
+      this.selectPiece(piece);
+      this.drag = {
+        piece: piece,
+        pointerId: e.pointerId,
+        startX: e.clientX,
+        startY: e.clientY,
+        moved: false,
+        anchor: null,
+        valid: false,
+        metrics: null,
+        bw: 1,
+        bh: 1
+      };
+    },
+
+    onPointerMove: function (e) {
+      var d = this.drag;
+      if (!d || e.pointerId !== d.pointerId) return;
+      if (!d.moved) {
+        var dist = Math.hypot(e.clientX - d.startX, e.clientY - d.startY);
+        if (dist < 7) return;
+        d.moved = true;
+        this.beginGhost();
+      }
+      this.updateGhost(e);
+      if (e.cancelable) e.preventDefault();
+    },
+
+    onPointerUp: function (e) {
+      var d = this.drag;
+      if (!d || e.pointerId !== d.pointerId) return;
+      if (!d.moved) {
+        this.endDrag();
+        return;
+      }
+      var piece = d.piece;
+      var anchor = d.anchor;
+      var valid = d.valid;
+      var state = this.pieceStates[piece];
+      var ghostRect = (this.ghost && this.ghost.classList.contains('show'))
+        ? this.ghost.getBoundingClientRect()
+        : null;
+      this.endDrag();
+      // 拖拽松手后浏览器可能再补一次 click，短暂屏蔽以免误放置
+      this.suppressClickUntil = Date.now() + 250;
+      if (valid && anchor) {
+        this.placePiece(piece, state.flip, state.rot, anchor.r, anchor.c, {
+          fromRect: ghostRect,
+          duration: 260
+        });
+      } else {
+        this.toast('这里放不下 换个位置试试');
+        this.shakeBoard();
+      }
+    },
+
+    onPointerCancel: function (e) {
+      var d = this.drag;
+      if (d && e.pointerId === d.pointerId) this.endDrag();
+    },
+
+    measureBoard: function () {
+      var rect = this.cellEls[0].getBoundingClientRect();
+      var gap = parseFloat(getComputedStyle(this.board).gap) || 3;
+      return {
+        originX: rect.left,
+        originY: rect.top,
+        cellW: rect.width,
+        cellH: rect.height,
+        gap: gap,
+        pitchX: rect.width + gap,
+        pitchY: rect.height + gap
+      };
+    },
+
+    beginGhost: function () {
+      if (!this.ghost) {
+        this.ghost = document.createElement('div');
+        this.ghost.className = 'drag-ghost';
+        document.body.appendChild(this.ghost);
+      }
+      var d = this.drag;
+      var state = this.pieceStates[d.piece];
+      var cells = CP.transformCells(CP.PIECE_DEFS[d.piece].cells, state.flip, state.rot);
+      var map = {};
+      var maxR = 0, maxC = 0;
+      for (var i = 0; i < cells.length; i++) {
+        map[cells[i][0] + ',' + cells[i][1]] = 1;
+        if (cells[i][0] > maxR) maxR = cells[i][0];
+        if (cells[i][1] > maxC) maxC = cells[i][1];
+      }
+      var m = this.measureBoard();
+      d.metrics = m;
+      d.bw = maxC + 1;
+      d.bh = maxR + 1;
+
+      var radius = Math.max(4, Math.min(10, Math.round(m.cellW * 0.17)));
+      var color = CP.PIECE_DEFS[d.piece].color;
+
+      this.ghost.innerHTML = '';
+      this.ghost.style.width = (d.bw * m.cellW + (d.bw - 1) * m.gap) + 'px';
+      this.ghost.style.height = (d.bh * m.cellH + (d.bh - 1) * m.gap) + 'px';
+
+      for (var k = 0; k < cells.length; k++) {
+        var lr = cells[k][0], lc = cells[k][1];
+        var up = map[(lr - 1) + ',' + lc];
+        var down = map[(lr + 1) + ',' + lc];
+        var left = map[lr + ',' + (lc - 1)];
+        var right = map[lr + ',' + (lc + 1)];
+
+        var dot = document.createElement('span');
+        dot.className = 'ghost-cell';
+        dot.style.left = (lc * (m.cellW + m.gap)) + 'px';
+        dot.style.top = (lr * (m.cellH + m.gap)) + 'px';
+        dot.style.width = (right ? m.cellW + m.gap : m.cellW) + 'px';
+        dot.style.height = (down ? m.cellH + m.gap : m.cellH) + 'px';
+        dot.style.borderRadius = [
+          (!up && !left) ? radius + 'px' : '0',
+          (!up && !right) ? radius + 'px' : '0',
+          (!down && !right) ? radius + 'px' : '0',
+          (!down && !left) ? radius + 'px' : '0'
+        ].join(' ');
+        dot.style.backgroundColor = color;
+        var shadow = [];
+        if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
+        if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
+        if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
+        if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
+        if (shadow.length) dot.style.boxShadow = shadow.join(', ');
+        this.ghost.appendChild(dot);
+      }
+      this.ghost.classList.add('show');
+    },
+
+    updateGhost: function (e) {
+      var d = this.drag;
+      if (!d || !d.metrics) return;
+      var m = d.metrics;
+      var state = this.pieceStates[d.piece];
+      var ghostW = d.bw * m.cellW + (d.bw - 1) * m.gap;
+      var ghostH = d.bh * m.cellH + (d.bh - 1) * m.gap;
+      var lift = e.pointerType === 'touch' ? 52 : 0;
+      var anchorC = Math.round((e.clientX - m.originX - ghostW / 2) / m.pitchX);
+      var anchorR = Math.round((e.clientY - lift - m.originY - ghostH / 2) / m.pitchY);
+      if (Math.abs(anchorR) > 20 || Math.abs(anchorC) > 20) {
+        // 拖离棋盘太远时不展示吸附
+      }
+      d.anchor = { r: anchorR, c: anchorC };
+      var mask = this.validCells(d.piece, state.flip, state.rot, anchorR, anchorC, null);
+      d.valid = !!mask;
+      this.ghost.style.transform = 'translate3d(' +
+        (m.originX + anchorC * m.pitchX) + 'px,' +
+        (m.originY + anchorR * m.pitchY) + 'px,0)';
+      this.ghost.classList.toggle('valid', d.valid);
+      this.ghost.classList.toggle('invalid', !d.valid);
+      this.setPreview(mask, d.valid);
+    },
+
+    endDrag: function () {
+      this.drag = null;
+      if (this.ghost) {
+        this.ghost.classList.remove('show', 'valid', 'invalid');
+        this.ghost.innerHTML = '';
+      }
+      this.clearPreview();
+    },
+
+    setPreview: function (mask, valid) {
+      this.clearPreview();
+      if (!mask) return;
+      this.preview = { cells: mask.slice(), valid: !!valid };
+      for (var i = 0; i < mask.length; i++) {
+        var el = this.cellEls[mask[i]];
+        if (el) el.classList.add(valid ? 'preview-valid' : 'preview-invalid');
+      }
+    },
+
+    clearPreview: function () {
+      if (!this.cellEls) return;
+      for (var i = 0; i < 56; i++) {
+        this.cellEls[i].classList.remove('preview-valid', 'preview-invalid');
+      }
+      this.preview = null;
+    },
+
+    onBoardClick: function (e) {
+      if (this.won || this.answerMode) return;
+      if (Date.now() < this.suppressClickUntil) return;
+      var cell = e.target.closest && e.target.closest('.cell');
+      if (!cell) return;
+      var idx = Number(cell.dataset.idx);
+      if (this.blocked[idx]) return;
+
+      var occ = this.placedByIndex[idx];
+      if (occ >= 0) {
+        this.removePiece(occ);
+        return;
+      }
+      if (this.selected === null) {
+        this.toast('先在下方选一块拼块');
+        this.shakeBoard();
+        return;
+      }
+      var anchor = this.findTapAnchor(this.selected, idx);
+      if (!anchor) {
+        this.toast('这个位置放不下 换个格子');
+        this.shakeBoard();
+        return;
+      }
+      var state = this.pieceStates[this.selected];
+      this.placePiece(this.selected, state.flip, state.rot, anchor.r, anchor.c);
+    },
+
+    onBoardPointerMove: function (e) {
+      if (e.pointerType !== 'mouse') return;
+      if (this.drag || this.won || this.answerMode || this.selected === null) return;
+      var cell = e.target.closest && e.target.closest('.cell');
+      if (!cell) return;
+      var idx = Number(cell.dataset.idx);
+      if (this.blocked[idx]) { this.clearPreview(); return; }
+      if (this.placedByIndex[idx] >= 0) { this.clearPreview(); return; }
+      var anchor = this.findTapAnchor(this.selected, idx);
+      if (!anchor) { this.clearPreview(); return; }
+      var state = this.pieceStates[this.selected];
+      var mask = this.validCells(this.selected, state.flip, state.rot, anchor.r, anchor.c, this.selected);
+      this.setPreview(mask, true);
+    },
+
+    // ---------- 提示与答案 ----------
+    useHint: function () {
+      if (this.won || this.answerMode) return;
+      var placed = {};
+      for (var i = 0; i < this.placements.length; i++) placed[this.placements[i].piece] = true;
+
+      var sol = this.hintSolution;
+      var chosen = null;
+      if (sol) {
+        for (var j = 0; j < sol.length; j++) {
+          if (!placed[sol[j].piece] && !this.hintedPieces[sol[j].piece]) { chosen = sol[j]; break; }
+        }
+      }
+
+      if (!chosen) {
+        var res = CP.Solver.generate(this.targetCells(), copyList(this.placements), {
+          maxSolutions: 1,
+          timeLimit: 1200,
+          shuffle: false
+        });
+        if (!res.solutions.length) {
+          if (res.timedOut) this.toast('搜索超时 再点一次提示试试');
+          else {
+            this.toast('当前摆法走不通 撤销一步再试');
+            this.flashUndo();
+          }
+          return;
+        }
+        sol = res.solutions[0];
+        this.hintSolution = sol;
+        this.hintedPieces = {};
+        for (var k = 0; k < sol.length; k++) {
+          if (!placed[sol[k].piece]) { chosen = sol[k]; break; }
+        }
+      }
+
+      if (!chosen) {
+        this.toast('这一局已经全部摆好了');
+        return;
+      }
+
+      this.hintedPieces[chosen.piece] = true;
+      this.selected = chosen.piece;
+      this.pieceStates[chosen.piece] = { flip: chosen.flip, rot: chosen.rot };
+      this.hint = {
+        piece: chosen.piece,
+        flip: chosen.flip,
+        rot: chosen.rot,
+        r: chosen.r,
+        c: chosen.c,
+        cells: chosen.mask.slice(),
+        color: this.colorOf(chosen.piece)
+      };
+      this.hints++;
+      this.toast('提示 ' + CP.PIECE_DEFS[chosen.piece].name + '拼块已选中 放到高亮位置');
+      this.renderAll();
+      this.save();
+    },
+
+    flashUndo: function () {
+      var btn = this.undoBtn;
+      btn.classList.remove('flash');
+      void btn.offsetWidth;
+      btn.classList.add('flash');
+      setTimeout(function () { btn.classList.remove('flash'); }, 1200);
+    },
+
+    showAnswer: function () {
+      if (this.won || this.answerMode) return;
+      var target = this.targetCells();
+      var fixed = copyList(this.placements);
+      var res = CP.Solver.generate(target, fixed, { maxSolutions: 10, timeLimit: 1600, shuffle: true });
+      var fromScratch = false;
+      if (!res.solutions.length) {
+        res = CP.Solver.generate(target, [], { maxSolutions: 10, timeLimit: 1600, shuffle: true });
+        fromScratch = true;
+      }
+      if (!res.solutions.length) {
+        this.toast('暂时没有找到解法 请重置后再试');
+        return;
+      }
+
+      this.answerMode = true;
+      this.answerFromScratch = fromScratch;
+      this.answerIdx = 0;
+      this.answers = [];
+      this.answerKeys = {};
+      var self = this;
+      res.solutions.forEach(function (s) { self.addAnswer(s); });
+      this.stopTimer();
+      this.selected = null;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.clearPreview();
+      this.revealed = true;
+      if (!this.revealCounted) {
+        this.stats.viewed = (this.stats.viewed || 0) + 1;
+        this.revealCounted = true;
+      }
+      this.renderAll();
+      this.save();
+    },
+
+    addAnswer: function (solution) {
+      var key = CP.Solver.solutionKey(solution);
+      if (this.answerKeys[key]) return false;
+      this.answerKeys[key] = true;
+      this.answers.push(solution);
+      return true;
+    },
+
+    nextAnswer: function () {
+      if (!this.answerMode) return;
+      if (this.answerIdx + 1 < this.answers.length) {
+        this.answerIdx++;
+        this.renderAll();
+        return;
+      }
+      var target = this.targetCells();
+      var fixed = this.answerFromScratch ? [] : copyList(this.placements);
+      var res = CP.Solver.generate(target, fixed, { maxSolutions: 20, timeLimit: 1200, shuffle: true });
+      var added = 0;
+      var self = this;
+      res.solutions.forEach(function (s) { if (self.addAnswer(s)) added++; });
+      if (added > 0) {
+        this.answerIdx = this.answers.length - added;
+        this.renderAll();
+      } else {
+        this.toast(res.timedOut ? '搜索超时 再点一次试试' : '没有更多不同的解法了');
+      }
+    },
+
+    // ---------- 结算 ----------
+    win: function () {
+      if (this.won) return;
+      this.won = true;
+      this.stopTimer();
+      var ms = this.getElapsed();
+      var info = {
+        ms: ms,
+        moves: this.moves,
+        hints: this.hints,
+        isDaily: this.isTodayChallenge(),
+        counted: false,
+        streak: 0,
+        isRecord: false,
+        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        revealed: this.revealed
+      };
+
+      if (!this.revealed) {
+        var key = CP.dateKey(new Date());
+        var prevBest = this.stats.bestMs;
+        CP.Storage.recordWin(this.stats, key, {
+          ms: ms,
+          moves: this.moves,
+          hints: this.hints,
+          daily: info.isDaily,
+          ts: Date.now()
+        }, info.isDaily);
+        info.counted = true;
+        info.isRecord = prevBest == null || ms < prevBest;
+        info.streak = CP.Storage.computeStreak(this.stats.dailyDays, key);
+      } else {
+        info.streak = CP.Storage.computeStreak(this.stats.dailyDays, CP.dateKey(new Date()));
+      }
+
+      this.lastWinInfo = info;
+      this.selected = null;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.undoStack = [];
+      this.redoStack = [];
+      this.renderAll();
+      this.save();
+
+      if (typeof this.opts.onWin === 'function') this.opts.onWin(info);
+    },
+
+    // ---------- 重置与存档 ----------
+    reset: function () {
+      if (this.answerMode || this.won) {
+        this.startNew(this.target);
+        this.toast('已重新开始');
+        return;
+      }
+      var had = this.placements.length > 0;
+      if (had) this.pushHistory();
+      this.placements = [];
+      this.pieceStates = this.pieceStates.map(function () { return { flip: 0, rot: 0 }; });
+      this.selected = null;
+      this.hint = null;
+      this.hintSolution = null;
+      this.hintedPieces = {};
+      this.moves = 0;
+      this.hints = 0;
+      this.revealed = false;
+      this.revealCounted = false;
+      this.timer = { running: false, elapsed: 0, last: 0 };
+      this.renderAll();
+      this.save();
+      this.toast(had ? '已重置 可以撤销' : '已经是最初状态');
+    },
+
+    save: function () {
+      if (!this.target) return;
+      this.data.stats = this.stats;
+      this.data.current = {
+        target: { m: this.target.m, d: this.target.d, w: this.target.w },
+        playDay: this.playDayKey,
+        placements: copyList(this.placements),
+        pieceStates: this.pieceStates.map(function (s) { return { flip: s.flip, rot: s.rot }; }),
+        moves: this.moves,
+        hints: this.hints,
+        revealed: this.revealed,
+        won: this.won,
+        elapsed: this.getElapsed(),
+        started: this.placements.length > 0 || this.timer.elapsed > 0
+      };
+      CP.Storage.save(this.data);
+    },
+
+    // ---------- 小工具 ----------
+    toast: function (msg) {
+      if (!this.toastEl) return;
+      this.toastEl.textContent = msg;
+      this.toastEl.classList.add('show');
+      clearTimeout(this.toastTimer);
+      var self = this;
+      this.toastTimer = setTimeout(function () {
+        self.toastEl.classList.remove('show');
+      }, 2300);
+    },
+
+    shakeBoard: function () {
+      this.board.classList.remove('shake');
+      void this.board.offsetWidth;
+      this.board.classList.add('shake');
+      var self = this;
+      setTimeout(function () { self.board.classList.remove('shake'); }, 520);
+    }
+  };
+
+  global.Game = Game;
+})(window);
+
+</script>
+  <script>
+(function () {
+  'use strict';
+  var CP = window.CP;
+
+  function $(id) { return document.getElementById(id); }
+
+  var game = null;
+  var dateSel = { m: 1, d: 1, w: 0 };
+  var lastFocus = null;
+  var deferredPrompt = null;
+
+  function weekName(w) { return '星期' + CP.WEEK_CELLS[w].label; }
+
+  function openModal(modal) {
+    lastFocus = document.activeElement;
+    modal.classList.add('open');
+    modal.setAttribute('aria-hidden', 'false');
+    document.body.classList.add('modal-open');
+    var closeBtn = modal.querySelector('.modal-close');
+    if (closeBtn) {
+      setTimeout(function () { closeBtn.focus({ preventScroll: true }); }, 60);
+    }
+  }
+
+  function closeModal(modal) {
+    modal.classList.remove('open');
+    modal.setAttribute('aria-hidden', 'true');
+    if (!document.querySelector('.modal.open')) {
+      document.body.classList.remove('modal-open');
+    }
+    if (lastFocus && lastFocus.focus) {
+      try { lastFocus.focus({ preventScroll: true }); } catch (e) { /* ignore */ }
+    }
+  }
+
+  function closeAllModals() {
+    var modals = document.querySelectorAll('.modal.open');
+    for (var i = 0; i < modals.length; i++) {
+      modals[i].classList.remove('open');
+      modals[i].setAttribute('aria-hidden', 'true');
+    }
+    document.body.classList.remove('modal-open');
+  }
+
+  // ---------- 日期选择 ----------
+  function buildDateChips() {
+    var monthGrid = $('monthGrid');
+    var dayGrid = $('dayGrid');
+    var weekGrid = $('weekGrid');
+
+    for (var m = 1; m <= 12; m++) {
+      var mBtn = document.createElement('button');
+      mBtn.type = 'button';
+      mBtn.className = 'chip';
+      mBtn.dataset.value = String(m);
+      mBtn.textContent = String(m);
+      monthGrid.appendChild(mBtn);
+    }
+    for (var d = 1; d <= 31; d++) {
+      var dBtn = document.createElement('button');
+      dBtn.type = 'button';
+      dBtn.className = 'chip';
+      dBtn.dataset.value = String(d);
+      dBtn.textContent = String(d);
+      dayGrid.appendChild(dBtn);
+    }
+    for (var w = 0; w < 7; w++) {
+      var wBtn = document.createElement('button');
+      wBtn.type = 'button';
+      wBtn.className = 'chip';
+      wBtn.dataset.value = String(w);
+      wBtn.textContent = CP.WEEK_CELLS[w].label;
+      weekGrid.appendChild(wBtn);
+    }
+
+    monthGrid.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      dateSel.m = Number(chip.dataset.value);
+      updateDateUI();
+    });
+    dayGrid.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      dateSel.d = Number(chip.dataset.value);
+      updateDateUI();
+    });
+    weekGrid.addEventListener('click', function (e) {
+      var chip = e.target.closest('.chip');
+      if (!chip) return;
+      dateSel.w = Number(chip.dataset.value);
+      updateDateUI();
+    });
+  }
+
+  function updateDateUI() {
+    var groups = [
+      { grid: $('monthGrid'), value: dateSel.m },
+      { grid: $('dayGrid'), value: dateSel.d },
+      { grid: $('weekGrid'), value: dateSel.w }
+    ];
+    groups.forEach(function (g) {
+      var chips = g.grid.querySelectorAll('.chip');
+      for (var i = 0; i < chips.length; i++) {
+        chips[i].classList.toggle('on', Number(chips[i].dataset.value) === g.value);
+      }
+    });
+    $('datePreview').textContent = dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
+    var warning = $('dateWarning');
+    var hasProgress = game && (game.placements.length > 0 || game.answerMode);
+    warning.hidden = !hasProgress;
+  }
+
+  function openDateModal() {
+    dateSel = { m: game.target.m, d: game.target.d, w: game.target.w };
+    updateDateUI();
+    openModal($('dateModal'));
+  }
+
+  function applyDate() {
+    var target = { m: dateSel.m, d: dateSel.d, w: dateSel.w };
+    var same = CP.isSameTarget(target, game.target) && !game.won && !game.answerMode;
+    closeModal($('dateModal'));
+    if (same) {
+      game.toast('已经是这一局了');
+      return;
+    }
+    game.startNew(target);
+    game.toast('已开始 ' + target.m + '月' + target.d + '日 ' + weekName(target.w));
+  }
+
+  // ---------- 统计 ----------
+  function renderStats() {
+    var stats = game.stats;
+    var todayKey = CP.dateKey(new Date());
+    var streak = CP.Storage.computeStreak(stats.dailyDays, todayKey);
+    var keys = Object.keys(stats.days);
+    var wins = keys.length;
+    var totalMs = 0;
+    for (var i = 0; i < keys.length; i++) totalMs += Number(stats.days[keys[i]].ms) || 0;
+    var avg = wins ? totalMs / wins : null;
+
+    var grid = $('statsGrid');
+    grid.innerHTML = '';
+    var cards = [
+      { label: '连续每日挑战', value: String(streak), unit: '天' },
+      { label: '完成局数', value: String(wins), unit: '局' },
+      { label: '最佳时间', value: CP.Storage.formatDuration(stats.bestMs), unit: '' },
+      { label: '平均时间', value: CP.Storage.formatDuration(avg), unit: '' }
+    ];
+    cards.forEach(function (card, index) {
+      var el = document.createElement('div');
+      el.className = 'stat-card';
+      el.style.setProperty('--i', String(index));
+      var span = document.createElement('span');
+      span.textContent = card.label;
+      var strong = document.createElement('strong');
+      strong.textContent = card.value;
+      el.appendChild(span);
+      el.appendChild(strong);
+      if (card.unit) {
+        var em = document.createElement('em');
+        em.textContent = card.unit;
+        el.appendChild(em);
+      }
+      grid.appendChild(el);
+    });
+
+    var dailyCount = Object.keys(stats.dailyDays).length;
+    $('statsFoot').textContent = '每日挑战完成 ' + dailyCount + ' 天 查看答案 ' + (stats.viewed || 0) + ' 次';
+
+    renderHeatmap(stats, todayKey);
+  }
+
+  function renderHeatmap(stats, todayKey) {
+    var heatmap = $('heatmap');
+    heatmap.innerHTML = '';
+    var now = new Date();
+    var today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+    var start = CP.Storage.addDays(today, -(today.getDay() + 49));
+
+    for (var i = 0; i < 56; i++) {
+      var day = CP.Storage.addDays(start, i);
+      var key = CP.dateKey(day);
+      var entry = stats.days[key];
+      var cell = document.createElement('div');
+      cell.className = 'heat-cell';
+      cell.style.setProperty('--i', String(i));
+      cell.textContent = String(day.getDate());
+      if (entry) {
+        cell.classList.add('solved');
+        if (!entry.daily) cell.classList.add('free');
+        cell.title = key + ' 完成 ' + CP.Storage.formatDuration(entry.ms);
+      } else {
+        cell.title = key + ' 未完成';
+      }
+      if (key === todayKey) cell.classList.add('today');
+      if (day.getTime() > today.getTime()) cell.classList.add('future');
+      heatmap.appendChild(cell);
+    }
+  }
+
+  function openStats() {
+    renderStats();
+    openModal($('statsModal'));
+  }
+
+  // ---------- 胜利 ----------
+  function showWin(info) {
+    var week = CP.WEEK_CELLS[info.target.w];
+    $('winSub').textContent = info.target.m + '月' + info.target.d + '日 星期' + week.label;
+    $('winTime').textContent = CP.Storage.formatDuration(info.ms);
+    $('winMoves').textContent = String(info.moves);
+    $('winHints').textContent = String(info.hints);
+
+    var note = '';
+    if (!info.counted) {
+      note = '本局查看过答案 不计入完成与连胜';
+    } else if (info.isDaily) {
+      note = '今日挑战完成 连续 ' + info.streak + ' 天';
+      if (info.isRecord) note += ' 新纪录';
+    } else {
+      note = '自由日期完成 不计入每日连胜';
+    }
+    $('winNote').textContent = note;
+
+    buildConfetti();
+    openModal($('winModal'));
+  }
+
+  function buildConfetti() {
+    var box = $('confetti');
+    box.innerHTML = '';
+    var colors = CP.PIECE_DEFS.map(function (p) { return p.color; });
+    for (var i = 0; i < 26; i++) {
+      var piece = document.createElement('i');
+      piece.style.left = (Math.random() * 100) + '%';
+      piece.style.background = colors[i % colors.length];
+      piece.style.width = (5 + Math.random() * 5) + 'px';
+      piece.style.height = (9 + Math.random() * 8) + 'px';
+      piece.style.animationDuration = (1.5 + Math.random() * 0.9) + 's';
+      piece.style.animationDelay = (Math.random() * 0.5) + 's';
+      box.appendChild(piece);
+    }
+  }
+
+  // ---------- 安装 ----------
+  function initInstall() {
+    var btn = $('btnInstall');
+    window.addEventListener('beforeinstallprompt', function (e) {
+      e.preventDefault();
+      deferredPrompt = e;
+      btn.hidden = false;
+    });
+
+    btn.addEventListener('click', function () {
+      if (!deferredPrompt) {
+        openHelp();
+        return;
+      }
+      deferredPrompt.prompt();
+      deferredPrompt.userChoice.then(function (choice) {
+        if (choice.outcome === 'accepted') {
+          btn.hidden = true;
+          if (game) game.toast('安装完成 之后离线也能打开');
+        }
+        deferredPrompt = null;
+      });
+    });
+
+    window.addEventListener('appinstalled', function () {
+      btn.hidden = true;
+      if (game) game.toast('已安装到设备');
+    });
+  }
+
+  function openHelp() {
+    openModal($('helpModal'));
+  }
+
+  // ---------- 启动 ----------
+  function boot() {
+    game = new window.Game({ onWin: showWin });
+    window.game = game;
+
+    buildDateChips();
+
+    $('btnDate').addEventListener('click', openDateModal);
+    $('btnStats').addEventListener('click', openStats);
+    $('btnHelp').addEventListener('click', openHelp);
+
+    $('btnApplyDate').addEventListener('click', applyDate);
+    $('btnToday').addEventListener('click', function () {
+      var today = CP.todayTarget();
+      dateSel = { m: today.m, d: today.d, w: today.w };
+      updateDateUI();
+    });
+    $('btnRandom').addEventListener('click', function () {
+      dateSel = {
+        m: Math.floor(Math.random() * 12) + 1,
+        d: Math.floor(Math.random() * 31) + 1,
+        w: Math.floor(Math.random() * 7)
+      };
+      updateDateUI();
+    });
+
+    $('winReplay').addEventListener('click', function () {
+      closeModal($('winModal'));
+      game.reset();
+    });
+    $('winDate').addEventListener('click', function () {
+      closeModal($('winModal'));
+      openDateModal();
+    });
+    $('winStats').addEventListener('click', function () {
+      closeModal($('winModal'));
+      openStats();
+    });
+
+    var closeButtons = document.querySelectorAll('[data-close]');
+    for (var i = 0; i < closeButtons.length; i++) {
+      closeButtons[i].addEventListener('click', function (e) {
+        var modal = e.target.closest('.modal');
+        if (modal) closeModal(modal);
+      });
+    }
+
+    var modals = document.querySelectorAll('.modal');
+    for (var j = 0; j < modals.length; j++) {
+      modals[j].addEventListener('click', function (e) {
+        if (e.target === e.currentTarget) closeModal(e.currentTarget);
+      });
+    }
+
+    var modalCards = document.querySelectorAll('.modal-card');
+    for (var c = 0; c < modalCards.length; c++) {
+      var kids = modalCards[c].children;
+      for (var d = 0; d < kids.length; d++) {
+        if (kids[d].classList.contains('confetti') || kids[d].classList.contains('win-check')) continue;
+        kids[d].style.setProperty('--d', (50 + d * 42) + 'ms');
+      }
+    }
+
+    document.addEventListener('keydown', function (e) {
+      var open = document.querySelector('.modal.open');
+      if (e.key === 'Escape') {
+        if (open) closeModal(open);
+        return;
+      }
+      if (open) return;
+      var key = e.key.toLowerCase();
+      if ((e.ctrlKey || e.metaKey) && key === 'z') {
+        e.preventDefault();
+        if (e.shiftKey) game.redo();
+        else game.undo();
+        return;
+      }
+      if (key === 'r') { game.rotateSelected(); return; }
+      if (key === 'f') { game.flipSelected(); return; }
+      if (e.key === '?') { openHelp(); }
+    });
+
+    initInstall();
+
+      }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+
+</script>
+</body>
+</html>
