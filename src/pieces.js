@@ -98,14 +98,24 @@
     return y + '-' + mm + '-' + dd;
   };
 
-  CP.todayTarget = function () {
-    var now = new Date();
+  CP.dateFromKey = function (key) {
+    var parts = String(key || '').split('-');
+    if (parts.length !== 3) return null;
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  CP.targetForDate = function (date) {
     return {
-      m: now.getMonth() + 1,
-      d: now.getDate(),
-      w: now.getDay(),
-      key: CP.dateKey(now)
+      m: date.getMonth() + 1,
+      d: date.getDate(),
+      w: date.getDay(),
+      key: CP.dateKey(date)
     };
+  };
+
+  CP.todayTarget = function () {
+    return CP.targetForDate(new Date());
   };
 
   CP.isSameTarget = function (a, b) {

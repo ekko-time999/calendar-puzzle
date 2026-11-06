@@ -269,6 +269,25 @@ button {
 
 .challenge-left { min-width: 0; }
 
+.challenge-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.back-today {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.22s var(--ease);
+}
+.back-today:hover { color: var(--accent-ink); border-color: var(--accent-soft); }
+.back-today:active { transform: scale(0.95); }
+
 .challenge-tag {
   display: inline-flex;
   align-items: center;
@@ -425,6 +444,19 @@ button {
 .cell.target.month { background: #ffe6d8; color: #8a3416; }
 .cell.target.day { background: #ddf3ee; color: #0f5f55; }
 .cell.target.week { background: #e7e5fd; color: #3730a3; }
+
+.cell.target { position: relative; }
+.cell.target.today-cell::after {
+  content: '今';
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.62;
+  letter-spacing: 0;
+}
 
 .cell-sub {
   font-size: 8px;
@@ -595,6 +627,44 @@ button {
 
 .dock-group { display: flex; gap: 6px; }
 .dock-right { margin-left: auto; }
+
+/* 旋转 翻转 独立成簇 图标语义与配色分开 */
+.dock-group.dock-transform {
+  position: relative;
+  padding: 3px;
+  border: 1px solid #f4e4cd;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fffaf2 0%, #fdf1e0 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 16px -14px rgba(120, 80, 30, 0.55);
+}
+.dock-transform .dock-btn {
+  border-color: transparent;
+  background: transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.18s var(--ease), box-shadow 0.2s ease;
+}
+.dock-transform .dock-btn span { font-weight: 600; letter-spacing: 0.04em; }
+#btnRotate .ico { color: #b45309; }
+#btnFlip .ico { color: #0f766e; }
+.dock-transform .dock-btn:hover { background: #fff; border-color: #f0ddc2; }
+.dock-transform .dock-btn:active { transform: scale(0.95); }
+
+.dock-transform.hint { animation: dockPulse 0.9s ease 2; }
+.dock-transform.hint #btnRotate .ico { animation: spinOnce 1s cubic-bezier(0.45, 0, 0.2, 1); }
+.dock-transform.hint #btnFlip .ico { animation: flipOnce 1s cubic-bezier(0.45, 0, 0.2, 1); }
+
+@keyframes dockPulse {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 22px -14px rgba(120, 80, 30, 0.5); }
+}
+@keyframes spinOnce {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes flipOnce {
+  0% { transform: scaleX(1); }
+  45% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
 
 .dock-btn {
   border: 1px solid var(--line);
@@ -1153,6 +1223,9 @@ button {
   .dock-group { gap: 3px; }
   .dock-btn { padding: 7px; font-size: 10.5px; border-radius: 8px; min-width: 34px; }
   .dock-btn span { display: none; }
+  /* 旋转与翻转常驻文字标签 避免只看图标分不清 */
+  .dock-transform .dock-btn { padding: 7px 9px; min-width: 0; gap: 5px; }
+  .dock-transform .dock-btn span { display: inline; font-size: 10px; }
   .dock-btn .ico { width: 15px; height: 15px; }
   .toast { bottom: calc(76px + env(safe-area-inset-bottom)); font-size: 12px; }
   body.tip-open .toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
@@ -1167,6 +1240,54 @@ button {
   }
   .stats-grid { gap: 8px; }
   .stat-card strong { font-size: 20px; }
+}
+
+/* 手机横屏 棋盘与拼块并排 工具栏不再压住棋盘 */
+@media (max-height: 560px) and (orientation: landscape) {
+  .topbar { padding: 6px 14px 2px; }
+  .brand-mark { width: 32px; height: 32px; padding: 5px; border-radius: 10px; }
+  .brand-text small { display: none; }
+  .top-actions .label { display: none; }
+  .btn, .btn.icon-sm, .btn.icon { width: 32px; height: 32px; padding: 0; justify-content: center; }
+  .btn.icon-sm .ico, .btn.icon .ico { width: 15px; height: 15px; }
+
+  .challenge { display: none; }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(196px, 228px);
+    grid-template-areas: "board tray";
+    gap: 10px;
+    padding: 0 10px 8px;
+  }
+
+  .board-card { padding: 5px; }
+  .board {
+    --cell: max(26px, calc((100dvh - 158px) / 8));
+    --gap: 2px;
+    --pad: 8px;
+    --piece-r: 7px;
+    border-radius: 16px;
+  }
+  .cell { border-radius: 5px; }
+  .cell.target { padding: 1px 2px 2px; }
+  .cell-sub { font-size: 7px; }
+  .cell-main { font-size: 13px; }
+  .cell.target.week .cell-main { font-size: 15px; }
+
+  .tray-card { padding: 8px 9px 7px; --mini: 10px; --mini-r: 3px; }
+  .tray-head h2 { font-size: 12px; }
+  .tray-head span, .tray-foot, .tray-num { display: none; }
+  .tray { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  .tray-piece { min-height: 40px; padding: 3px; border-radius: 9px; }
+
+  .dock { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); }
+  .dock-inner { padding: 4px; gap: 6px; border-radius: 12px; }
+  .dock-btn { padding: 6px 8px; font-size: 11px; gap: 4px; }
+  .dock-btn span { display: inline; font-size: 9.5px; }
+  .dock-transform .dock-btn { padding: 6px 7px; }
+  .dock-btn .ico { width: 14px; height: 14px; }
+
+  .install-tip { display: none !important; }
 }
 
 @media (max-width: 900px) and (max-height: 700px) {

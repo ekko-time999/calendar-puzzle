@@ -252,6 +252,11 @@
       window.navigator.standalone === true;
   }
 
+  // 安装包内是 file:// 环境 没有安装入口 也不该弹安装引导
+  function isLocalFile() {
+    return window.location.protocol === 'file:';
+  }
+
   function tipWasHidden() {
     try { return window.localStorage.getItem(INSTALL_TIP_KEY) === '1'; } catch (e) { return false; }
   }
@@ -263,9 +268,28 @@
   function initInstall() {
     var btn = $('btnInstall');
     var tip = $('installTip');
+    var tipTitle = $('installTipTitle');
+    var tipSub = $('installTipSub');
     var tipGo = $('installTipGo');
+    var tipDown = $('installTipDown');
     var tipClose = $('installTipClose');
     var tipTimer = null;
+
+    // 不支持 beforeinstallprompt 的浏览器 改用菜单引导 + 安装包下载
+    function setTipMode(mode) {
+      if (!tip) return;
+      if (mode === 'fallback') {
+        tipTitle.textContent = '在浏览器菜单里 添加到桌面';
+        tipSub.textContent = '找不到入口就下载安装包';
+        if (tipGo) tipGo.hidden = true;
+        if (tipDown) tipDown.hidden = false;
+      } else {
+        tipTitle.textContent = '装到桌面 离线也能玩';
+        tipSub.textContent = '独立全屏 没有地址栏';
+        if (tipGo) tipGo.hidden = false;
+        if (tipDown) tipDown.hidden = true;
+      }
+    }
 
     function hideTip(remember) {
       if (!tip) return;
@@ -276,14 +300,27 @@
       tipTimer = setTimeout(function () { tip.hidden = true; }, 380);
     }
 
-    function showTip() {
-      if (!deferredPrompt || !tip || isStandalone() || tipWasHidden()) return;
-      // 电脑端已有顶栏安装入口 只在手机端弹出
+    function revealTip() {
+      if (!tip || isLocalFile() || isStandalone() || tipWasHidden()) return;
       if (!window.matchMedia('(max-width: 900px)').matches) return;
       clearTimeout(tipTimer);
       tip.hidden = false;
       document.body.classList.add('tip-open');
       requestAnimationFrame(function () { tip.classList.add('show'); });
+    }
+
+    function showInstallTip() {
+      if (!deferredPrompt) return;
+      setTipMode('install');
+      revealTip();
+    }
+
+    function showFallbackTip() {
+      if (deferredPrompt || isStandalone() || tipWasHidden()) return;
+      if (!window.matchMedia('(max-width: 900px)').matches) return;
+      if (!/Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent)) return;
+      setTipMode('fallback');
+      revealTip();
     }
 
     function runPrompt() {
@@ -312,7 +349,11 @@
       e.preventDefault();
       deferredPrompt = e;
       btn.hidden = false;
-      setTimeout(showTip, 900);
+      if (tip && !tip.hidden) {
+        setTipMode('install');
+        return;
+      }
+      setTimeout(showInstallTip, 900);
     });
 
     btn.addEventListener('click', function () {
@@ -325,12 +366,16 @@
 
     if (tipGo) tipGo.addEventListener('click', runPrompt);
     if (tipClose) tipClose.addEventListener('click', function () { hideTip(true); });
+    if (tipDown) tipDown.addEventListener('click', function () { hideTip(true); });
 
     window.addEventListener('appinstalled', function () {
       btn.hidden = true;
       hideTip(true);
       if (game) game.toast('已安装到设备');
     });
+
+    // Chromium 会提前触发安装事件 等一会还没有就用兜底引导
+    setTimeout(showFallbackTip, 1800);
   }
 
   function openHelp() {

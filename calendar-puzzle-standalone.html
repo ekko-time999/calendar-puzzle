@@ -279,6 +279,25 @@ button {
 
 .challenge-left { min-width: 0; }
 
+.challenge-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+
+.back-today {
+  display: inline-flex;
+  align-items: center;
+  padding: 4px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.2s ease, border-color 0.2s ease, transform 0.22s var(--ease);
+}
+.back-today:hover { color: var(--accent-ink); border-color: var(--accent-soft); }
+.back-today:active { transform: scale(0.95); }
+
 .challenge-tag {
   display: inline-flex;
   align-items: center;
@@ -435,6 +454,19 @@ button {
 .cell.target.month { background: #ffe6d8; color: #8a3416; }
 .cell.target.day { background: #ddf3ee; color: #0f5f55; }
 .cell.target.week { background: #e7e5fd; color: #3730a3; }
+
+.cell.target { position: relative; }
+.cell.target.today-cell::after {
+  content: '今';
+  position: absolute;
+  top: 2px;
+  right: 3px;
+  font-size: 8px;
+  font-weight: 700;
+  line-height: 1;
+  opacity: 0.62;
+  letter-spacing: 0;
+}
 
 .cell-sub {
   font-size: 8px;
@@ -605,6 +637,44 @@ button {
 
 .dock-group { display: flex; gap: 6px; }
 .dock-right { margin-left: auto; }
+
+/* 旋转 翻转 独立成簇 图标语义与配色分开 */
+.dock-group.dock-transform {
+  position: relative;
+  padding: 3px;
+  border: 1px solid #f4e4cd;
+  border-radius: 13px;
+  background: linear-gradient(180deg, #fffaf2 0%, #fdf1e0 100%);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 8px 16px -14px rgba(120, 80, 30, 0.55);
+}
+.dock-transform .dock-btn {
+  border-color: transparent;
+  background: transparent;
+  transition: background-color 0.2s ease, border-color 0.2s ease, transform 0.18s var(--ease), box-shadow 0.2s ease;
+}
+.dock-transform .dock-btn span { font-weight: 600; letter-spacing: 0.04em; }
+#btnRotate .ico { color: #b45309; }
+#btnFlip .ico { color: #0f766e; }
+.dock-transform .dock-btn:hover { background: #fff; border-color: #f0ddc2; }
+.dock-transform .dock-btn:active { transform: scale(0.95); }
+
+.dock-transform.hint { animation: dockPulse 0.9s ease 2; }
+.dock-transform.hint #btnRotate .ico { animation: spinOnce 1s cubic-bezier(0.45, 0, 0.2, 1); }
+.dock-transform.hint #btnFlip .ico { animation: flipOnce 1s cubic-bezier(0.45, 0, 0.2, 1); }
+
+@keyframes dockPulse {
+  0%, 100% { transform: scale(1); }
+  40% { transform: scale(1.05); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9), 0 12px 22px -14px rgba(120, 80, 30, 0.5); }
+}
+@keyframes spinOnce {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+@keyframes flipOnce {
+  0% { transform: scaleX(1); }
+  45% { transform: scaleX(-1); }
+  100% { transform: scaleX(1); }
+}
 
 .dock-btn {
   border: 1px solid var(--line);
@@ -1163,6 +1233,9 @@ button {
   .dock-group { gap: 3px; }
   .dock-btn { padding: 7px; font-size: 10.5px; border-radius: 8px; min-width: 34px; }
   .dock-btn span { display: none; }
+  /* 旋转与翻转常驻文字标签 避免只看图标分不清 */
+  .dock-transform .dock-btn { padding: 7px 9px; min-width: 0; gap: 5px; }
+  .dock-transform .dock-btn span { display: inline; font-size: 10px; }
   .dock-btn .ico { width: 15px; height: 15px; }
   .toast { bottom: calc(76px + env(safe-area-inset-bottom)); font-size: 12px; }
   body.tip-open .toast { bottom: calc(150px + env(safe-area-inset-bottom)); }
@@ -1177,6 +1250,54 @@ button {
   }
   .stats-grid { gap: 8px; }
   .stat-card strong { font-size: 20px; }
+}
+
+/* 手机横屏 棋盘与拼块并排 工具栏不再压住棋盘 */
+@media (max-height: 560px) and (orientation: landscape) {
+  .topbar { padding: 6px 14px 2px; }
+  .brand-mark { width: 32px; height: 32px; padding: 5px; border-radius: 10px; }
+  .brand-text small { display: none; }
+  .top-actions .label { display: none; }
+  .btn, .btn.icon-sm, .btn.icon { width: 32px; height: 32px; padding: 0; justify-content: center; }
+  .btn.icon-sm .ico, .btn.icon .ico { width: 15px; height: 15px; }
+
+  .challenge { display: none; }
+
+  .layout {
+    grid-template-columns: minmax(0, 1fr) minmax(196px, 228px);
+    grid-template-areas: "board tray";
+    gap: 10px;
+    padding: 0 10px 8px;
+  }
+
+  .board-card { padding: 5px; }
+  .board {
+    --cell: max(26px, calc((100dvh - 158px) / 8));
+    --gap: 2px;
+    --pad: 8px;
+    --piece-r: 7px;
+    border-radius: 16px;
+  }
+  .cell { border-radius: 5px; }
+  .cell.target { padding: 1px 2px 2px; }
+  .cell-sub { font-size: 7px; }
+  .cell-main { font-size: 13px; }
+  .cell.target.week .cell-main { font-size: 15px; }
+
+  .tray-card { padding: 8px 9px 7px; --mini: 10px; --mini-r: 3px; }
+  .tray-head h2 { font-size: 12px; }
+  .tray-head span, .tray-foot, .tray-num { display: none; }
+  .tray { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 6px; margin-top: 6px; }
+  .tray-piece { min-height: 40px; padding: 3px; border-radius: 9px; }
+
+  .dock { padding: 4px 8px calc(4px + env(safe-area-inset-bottom)); }
+  .dock-inner { padding: 4px; gap: 6px; border-radius: 12px; }
+  .dock-btn { padding: 6px 8px; font-size: 11px; gap: 4px; }
+  .dock-btn span { display: inline; font-size: 9.5px; }
+  .dock-transform .dock-btn { padding: 6px 7px; }
+  .dock-btn .ico { width: 14px; height: 14px; }
+
+  .install-tip { display: none !important; }
 }
 
 @media (max-width: 900px) and (max-height: 700px) {
@@ -1219,8 +1340,8 @@ button {
   <svg class="sprite" xmlns="http://www.w3.org/2000/svg" aria-hidden="true" focusable="false">
     <symbol id="i-undo" viewBox="0 0 24 24"><path d="M9 14 4 9l5-5"/><path d="M4 9h10.5a5.5 5.5 0 0 1 0 11H11"/></symbol>
     <symbol id="i-redo" viewBox="0 0 24 24"><path d="m15 14 5-5-5-5"/><path d="M20 9H9.5a5.5 5.5 0 0 0 0 11H13"/></symbol>
-    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/></symbol>
-    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M12 3v18"/><path d="M8 7H5a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h3"/><path d="M16 7h3a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2h-3"/></symbol>
+    <symbol id="i-rotate" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.94.99 6.74 2.74L21 8"/><path d="M21 3v5h-5"/></symbol>
+    <symbol id="i-flip" viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v14c0 1.1.9 2 2 2h3"/><path d="M16 3h3a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-3"/><path d="M12 20v2M12 14v2M12 8v2M12 2v3"/></symbol>
     <symbol id="i-hint" viewBox="0 0 24 24"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 6 0 0 0 0 9.5c0 1 .5 2.2 1.5 3.1.8.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></symbol>
     <symbol id="i-answer" viewBox="0 0 24 24"><path d="M2 12c2.5-4.2 6-6.5 10-6.5s7.5 2.3 10 6.5c-2.5 4.2-6 6.5-10 6.5S4.5 16.2 2 12Z"/><circle cx="12" cy="12" r="3"/></symbol>
     <symbol id="i-reset" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></symbol>
@@ -1260,7 +1381,10 @@ button {
     <main class="layout">
       <section class="challenge panel">
         <div class="challenge-left">
-          <span id="challengeTag" class="challenge-tag">今日挑战</span>
+          <div class="challenge-head">
+            <span id="challengeTag" class="challenge-tag">今日挑战</span>
+            <button id="btnBackToday" class="back-today" type="button" hidden>回到今天</button>
+          </div>
           <h1 id="challengeTitle">11月2日 星期一</h1>
           <p class="challenge-sub">铺满棋盘 只留下月日星期三个格子</p>
         </div>
@@ -1304,12 +1428,12 @@ button {
             <svg class="ico" aria-hidden="true"><use href="#i-redo"/></svg><span>重做</span>
           </button>
         </div>
-        <div class="dock-group">
+        <div class="dock-group dock-transform">
           <button id="btnRotate" class="dock-btn" type="button" aria-label="旋转选中拼块">
             <svg class="ico" aria-hidden="true"><use href="#i-rotate"/></svg><span>旋转</span>
           </button>
-          <button id="btnFlip" class="dock-btn" type="button" aria-label="翻面选中拼块">
-            <svg class="ico" aria-hidden="true"><use href="#i-flip"/></svg><span>翻面</span>
+          <button id="btnFlip" class="dock-btn" type="button" aria-label="翻转选中拼块">
+            <svg class="ico" aria-hidden="true"><use href="#i-flip"/></svg><span>翻转</span>
           </button>
         </div>
         <div class="dock-group">
@@ -1334,10 +1458,11 @@ button {
       <svg class="ico" aria-hidden="true"><use href="#i-install"/></svg>
     </span>
     <div class="install-tip-text">
-      <strong>装到桌面 离线也能玩</strong>
-      <span>独立全屏 没有地址栏</span>
+      <strong id="installTipTitle">装到桌面 离线也能玩</strong>
+      <span id="installTipSub">独立全屏 没有地址栏</span>
     </div>
     <button id="installTipGo" class="btn primary install-tip-go" type="button">安装</button>
+    <a id="installTipDown" class="btn primary install-tip-go" href="download/calendar-puzzle.apk" download hidden>下载</a>
     <button id="installTipClose" class="install-tip-close" type="button" aria-label="暂不安装">
       <svg class="ico" aria-hidden="true"><use href="#i-close"/></svg>
     </button>
@@ -1423,11 +1548,12 @@ button {
       <section class="help-section">
         <h3>安装到 Android</h3>
         <ol>
-          <li>用 Chrome 打开本页面 首次需要联网</li>
-          <li>点右上角菜单 选择安装应用或添加到主屏幕</li>
-          <li>安装后所有资源都已缓存 之后飞行模式也能直接打开</li>
+          <li>Chrome 打开本页面 点顶部安装按钮 或菜单里的安装应用</li>
+          <li>夸克 UC QQ 微信等浏览器 点工具栏菜单 选 添加到桌面 或 添加到主屏幕</li>
+          <li>找不到入口 直接下载安装包 装好后桌面有图标 断网也能玩</li>
         </ol>
-        <p class="help-note">如果找不到安装入口 也可以先正常打开一次 等缓存完成后再断网使用</p>
+        <a class="btn primary help-download" href="download/calendar-puzzle.apk" download>下载 Android 安装包 APK</a>
+        <p class="help-note">安装包约 1 MB 首次安装需允许未知来源应用 装好后不依赖浏览器与网络</p>
       </section>
 
       <section class="help-section">
@@ -1571,14 +1697,24 @@ button {
     return y + '-' + mm + '-' + dd;
   };
 
-  CP.todayTarget = function () {
-    var now = new Date();
+  CP.dateFromKey = function (key) {
+    var parts = String(key || '').split('-');
+    if (parts.length !== 3) return null;
+    var d = new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    return isNaN(d.getTime()) ? null : d;
+  };
+
+  CP.targetForDate = function (date) {
     return {
-      m: now.getMonth() + 1,
-      d: now.getDate(),
-      w: now.getDay(),
-      key: CP.dateKey(now)
+      m: date.getMonth() + 1,
+      d: date.getDate(),
+      w: date.getDay(),
+      key: CP.dateKey(date)
     };
+  };
+
+  CP.todayTarget = function () {
+    return CP.targetForDate(new Date());
   };
 
   CP.isSameTarget = function (a, b) {
@@ -2072,6 +2208,7 @@ button {
     this.buildTray();
     this.bindEvents();
     this.restoreOrStart();
+    this.checkDayRollover(false);
     this.renderAll();
     this.save();
 
@@ -2121,6 +2258,17 @@ button {
       return this.target.m === now.getMonth() + 1 &&
         this.target.d === now.getDate() &&
         this.target.w === now.getDay();
+    },
+
+    // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
+    checkDayRollover: function (notify) {
+      var today = CP.todayTarget();
+      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) return false;
+      var oldDay = CP.dateFromKey(this.playDayKey);
+      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) return false;
+      this.startNew(today);
+      if (notify !== false) this.toast('新的一天 已切换到 ' + today.m + '月' + today.d + '日');
+      return true;
     },
 
     cellsOfPlacement: function (pl) {
@@ -2276,6 +2424,7 @@ button {
           } else if (this.targetInfo[idx]) {
             var info = this.targetInfo[idx];
             el.classList.add('target', info.kind);
+            if (this.isTodayChallenge()) el.classList.add('today-cell');
             var sub = document.createElement('span');
             sub.className = 'cell-sub';
             sub.textContent = info.sub;
@@ -2416,11 +2565,30 @@ button {
         if (document.hidden) {
           self.stopTimer();
           self.save();
-        } else if (!self.won && !self.answerMode && (self.placements.length || self.timer.elapsed > 0)) {
-          self.startTimer();
+        } else {
+          self.checkDayRollover();
+          if (!self.won && !self.answerMode && (self.placements.length || self.timer.elapsed > 0)) {
+            self.startTimer();
+          }
         }
       });
       global.addEventListener('beforeunload', function () { self.save(); });
+
+      // 长时间挂在后台或一直开着时 每分钟检查是否跨天
+      setInterval(function () { self.checkDayRollover(); }, 60000);
+
+      var backToday = $('btnBackToday');
+      if (backToday) {
+        backToday.addEventListener('click', function () {
+          var today = CP.todayTarget();
+          if (self.isTodayChallenge() && !self.won) {
+            self.toast('已经是今天的题目');
+            return;
+          }
+          self.startNew(today);
+          self.toast('已回到今天 ' + today.m + '月' + today.d + '日');
+        });
+      }
     },
 
     // ---------- 渲染 ----------
@@ -2452,6 +2620,8 @@ button {
       }
       this.tagEl.classList.toggle('done', this.won);
       this.tagEl.classList.toggle('free', !daily && !this.won);
+      var backToday = $('btnBackToday');
+      if (backToday) backToday.hidden = daily;
     },
 
     renderBoardState: function () {
@@ -2810,6 +2980,20 @@ button {
       this.selected = piece;
       this.renderTray();
       this.renderControls();
+      this.showTransformHint();
+    },
+
+    // 首次选中拼块时 演示一次 旋转 与 翻转 的作用
+    showTransformHint: function () {
+      var group = document.querySelector('.dock-transform');
+      if (!group) return;
+      var seen = false;
+      try { seen = window.localStorage.getItem('cp-transform-hint') === '1'; } catch (e) { return; }
+      if (seen) return;
+      try { window.localStorage.setItem('cp-transform-hint', '1'); } catch (e) { /* 忽略 */ }
+      group.classList.add('hint');
+      this.toast('点 旋转 转方向 点 翻转 变镜像');
+      setTimeout(function () { group.classList.remove('hint'); }, 1900);
     },
 
     rotateSelected: function () {
@@ -3569,6 +3753,11 @@ button {
       window.navigator.standalone === true;
   }
 
+  // 安装包内是 file:// 环境 没有安装入口 也不该弹安装引导
+  function isLocalFile() {
+    return window.location.protocol === 'file:';
+  }
+
   function tipWasHidden() {
     try { return window.localStorage.getItem(INSTALL_TIP_KEY) === '1'; } catch (e) { return false; }
   }
@@ -3580,9 +3769,28 @@ button {
   function initInstall() {
     var btn = $('btnInstall');
     var tip = $('installTip');
+    var tipTitle = $('installTipTitle');
+    var tipSub = $('installTipSub');
     var tipGo = $('installTipGo');
+    var tipDown = $('installTipDown');
     var tipClose = $('installTipClose');
     var tipTimer = null;
+
+    // 不支持 beforeinstallprompt 的浏览器 改用菜单引导 + 安装包下载
+    function setTipMode(mode) {
+      if (!tip) return;
+      if (mode === 'fallback') {
+        tipTitle.textContent = '在浏览器菜单里 添加到桌面';
+        tipSub.textContent = '找不到入口就下载安装包';
+        if (tipGo) tipGo.hidden = true;
+        if (tipDown) tipDown.hidden = false;
+      } else {
+        tipTitle.textContent = '装到桌面 离线也能玩';
+        tipSub.textContent = '独立全屏 没有地址栏';
+        if (tipGo) tipGo.hidden = false;
+        if (tipDown) tipDown.hidden = true;
+      }
+    }
 
     function hideTip(remember) {
       if (!tip) return;
@@ -3593,14 +3801,27 @@ button {
       tipTimer = setTimeout(function () { tip.hidden = true; }, 380);
     }
 
-    function showTip() {
-      if (!deferredPrompt || !tip || isStandalone() || tipWasHidden()) return;
-      // 电脑端已有顶栏安装入口 只在手机端弹出
+    function revealTip() {
+      if (!tip || isLocalFile() || isStandalone() || tipWasHidden()) return;
       if (!window.matchMedia('(max-width: 900px)').matches) return;
       clearTimeout(tipTimer);
       tip.hidden = false;
       document.body.classList.add('tip-open');
       requestAnimationFrame(function () { tip.classList.add('show'); });
+    }
+
+    function showInstallTip() {
+      if (!deferredPrompt) return;
+      setTipMode('install');
+      revealTip();
+    }
+
+    function showFallbackTip() {
+      if (deferredPrompt || isStandalone() || tipWasHidden()) return;
+      if (!window.matchMedia('(max-width: 900px)').matches) return;
+      if (!/Android|iPhone|iPad|iPod|Mobile/i.test(window.navigator.userAgent)) return;
+      setTipMode('fallback');
+      revealTip();
     }
 
     function runPrompt() {
@@ -3629,7 +3850,11 @@ button {
       e.preventDefault();
       deferredPrompt = e;
       btn.hidden = false;
-      setTimeout(showTip, 900);
+      if (tip && !tip.hidden) {
+        setTipMode('install');
+        return;
+      }
+      setTimeout(showInstallTip, 900);
     });
 
     btn.addEventListener('click', function () {
@@ -3642,12 +3867,16 @@ button {
 
     if (tipGo) tipGo.addEventListener('click', runPrompt);
     if (tipClose) tipClose.addEventListener('click', function () { hideTip(true); });
+    if (tipDown) tipDown.addEventListener('click', function () { hideTip(true); });
 
     window.addEventListener('appinstalled', function () {
       btn.hidden = true;
       hideTip(true);
       if (game) game.toast('已安装到设备');
     });
+
+    // Chromium 会提前触发安装事件 等一会还没有就用兜底引导
+    setTimeout(showFallbackTip, 1800);
   }
 
   function openHelp() {

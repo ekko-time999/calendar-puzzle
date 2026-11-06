@@ -78,6 +78,7 @@
     this.buildTray();
     this.bindEvents();
     this.restoreOrStart();
+    this.checkDayRollover(false);
     this.renderAll();
     this.save();
 
@@ -127,6 +128,17 @@
       return this.target.m === now.getMonth() + 1 &&
         this.target.d === now.getDate() &&
         this.target.w === now.getDay();
+    },
+
+    // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
+    checkDayRollover: function (notify) {
+      var today = CP.todayTarget();
+      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) return false;
+      var oldDay = CP.dateFromKey(this.playDayKey);
+      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) return false;
+      this.startNew(today);
+      if (notify !== false) this.toast('新的一天 已切换到 ' + today.m + '月' + today.d + '日');
+      return true;
     },
 
     cellsOfPlacement: function (pl) {
@@ -282,6 +294,7 @@
           } else if (this.targetInfo[idx]) {
             var info = this.targetInfo[idx];
             el.classList.add('target', info.kind);
+            if (this.isTodayChallenge()) el.classList.add('today-cell');
             var sub = document.createElement('span');
             sub.className = 'cell-sub';
             sub.textContent = info.sub;
@@ -422,11 +435,30 @@
         if (document.hidden) {
           self.stopTimer();
           self.save();
-        } else if (!self.won && !self.answerMode && (self.placements.length || self.timer.elapsed > 0)) {
-          self.startTimer();
+        } else {
+          self.checkDayRollover();
+          if (!self.won && !self.answerMode && (self.placements.length || self.timer.elapsed > 0)) {
+            self.startTimer();
+          }
         }
       });
       global.addEventListener('beforeunload', function () { self.save(); });
+
+      // 长时间挂在后台或一直开着时 每分钟检查是否跨天
+      setInterval(function () { self.checkDayRollover(); }, 60000);
+
+      var backToday = $('btnBackToday');
+      if (backToday) {
+        backToday.addEventListener('click', function () {
+          var today = CP.todayTarget();
+          if (self.isTodayChallenge() && !self.won) {
+            self.toast('已经是今天的题目');
+            return;
+          }
+          self.startNew(today);
+          self.toast('已回到今天 ' + today.m + '月' + today.d + '日');
+        });
+      }
     },
 
     // ---------- 渲染 ----------
@@ -458,6 +490,8 @@
       }
       this.tagEl.classList.toggle('done', this.won);
       this.tagEl.classList.toggle('free', !daily && !this.won);
+      var backToday = $('btnBackToday');
+      if (backToday) backToday.hidden = daily;
     },
 
     renderBoardState: function () {
@@ -816,6 +850,20 @@
       this.selected = piece;
       this.renderTray();
       this.renderControls();
+      this.showTransformHint();
+    },
+
+    // 首次选中拼块时 演示一次 旋转 与 翻转 的作用
+    showTransformHint: function () {
+      var group = document.querySelector('.dock-transform');
+      if (!group) return;
+      var seen = false;
+      try { seen = window.localStorage.getItem('cp-transform-hint') === '1'; } catch (e) { return; }
+      if (seen) return;
+      try { window.localStorage.setItem('cp-transform-hint', '1'); } catch (e) { /* 忽略 */ }
+      group.classList.add('hint');
+      this.toast('点 旋转 转方向 点 翻转 变镜像');
+      setTimeout(function () { group.classList.remove('hint'); }, 1900);
     },
 
     rotateSelected: function () {

@@ -1,2 +1,5 @@
 calendar-puzzle-pwa.zip
 site-list-err.log
+.build-apk/
+android/keystore/
+.trae-html-share-packages/
