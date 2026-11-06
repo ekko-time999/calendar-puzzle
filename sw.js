@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE = 'calendar-puzzle-v9';
+const CACHE = 'calendar-puzzle-v10';
 const ASSETS = [
   './',
   './index.html',
@@ -66,16 +66,16 @@ self.addEventListener('fetch', (event) => {
     return;
   }
 
-  // 静态资源：先用缓存，后台静默更新，离线也能用
+  // 静态资源：联网时先取最新 避免旧 HTML/旧脚本混搭；断网时回退缓存
   event.respondWith(
-    caches.match(request, { ignoreSearch: true }).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          putInCache(request, response);
-          return response;
-        })
-        .catch(() => cached || Response.error());
-      return cached || network;
-    })
+    fetch(request)
+      .then((response) => {
+        putInCache(request, response);
+        return response;
+      })
+      .catch(() =>
+        caches.match(request, { ignoreSearch: true })
+          .then((cached) => cached || Response.error())
+      )
   );
 });

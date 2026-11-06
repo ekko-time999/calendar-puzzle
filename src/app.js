@@ -491,6 +491,15 @@
     initInstall();
 
     if ('serviceWorker' in navigator && /^https?:/.test(location.protocol)) {
+      // 已有旧版本接管时 新 Service Worker 生效后自动刷新一次
+      // 避免本次加载继续运行旧缓存里的脚本 刷新一次即可拿到同一版本的全部资源
+      var hadController = !!navigator.serviceWorker.controller;
+      var swReloading = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function () {
+        if (!hadController || swReloading) return;
+        swReloading = true;
+        location.reload();
+      });
       window.addEventListener('load', function () {
         navigator.serviceWorker.register('sw.js').catch(function () {
           /* 离线缓存不可用时仍可正常游玩 */

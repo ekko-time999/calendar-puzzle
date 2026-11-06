@@ -84,6 +84,14 @@
 
     var self = this;
     this.timerId = setInterval(function () { self.tick(); }, 1000);
+    // 入场动画与首帧布局稳定后 按最终尺寸再铺一次拼块
+    // 覆盖：刷新恢复存档、手机浏览器工具栏收起导致 100dvh 变化等情况
+    setTimeout(function () {
+      if (self.placements.length || self.answerMode || self.hint) {
+        self.renderBoardState();
+        self.renderTray();
+      }
+    }, 1000);
   }
 
   Game.prototype = {
@@ -705,14 +713,19 @@
       setInterval(function () { self.checkDayRollover(); }, 60000);
 
       // 拼块轮廓按实测像素绘制 窗口尺寸变化后按新尺寸重新铺一遍
-      var resizeTimer = null;
-      global.addEventListener('resize', function () {
-        clearTimeout(resizeTimer);
-        resizeTimer = setTimeout(function () {
+      var relayoutTimer = null;
+      function relayout() {
+        clearTimeout(relayoutTimer);
+        relayoutTimer = setTimeout(function () {
           self.renderBoardState();
           self.renderTray();
         }, 160);
-      });
+      }
+      global.addEventListener('resize', relayout);
+      // 手机浏览器地址栏/工具栏收起时 视口高度变化可能只触发 visualViewport 事件
+      if (global.visualViewport) {
+        global.visualViewport.addEventListener('resize', relayout);
+      }
 
       var backToday = $('btnBackToday');
       if (backToday) {
@@ -1242,16 +1255,24 @@
     },
 
     measureBoard: function () {
-      var rect = this.cellEls[0].getBoundingClientRect();
+      var cell = this.cellEls[0];
+      var rect = cell.getBoundingClientRect();
+      var cs = getComputedStyle(cell);
       var gap = parseFloat(getComputedStyle(this.board).gap) || 3;
+      // 必须用布局尺寸 不能用 getBoundingClientRect
+      // 入场动画(cellIn 的 scale 0.84)会让 rect 偏小 刷新恢复存档时拼块会按缩小后的尺寸绘制
+      var cellW = parseFloat(cs.width);
+      var cellH = parseFloat(cs.height);
+      if (!isFinite(cellW) || cellW <= 0) cellW = rect.width;
+      if (!isFinite(cellH) || cellH <= 0) cellH = rect.height;
       return {
         originX: rect.left,
         originY: rect.top,
-        cellW: rect.width,
-        cellH: rect.height,
+        cellW: cellW,
+        cellH: cellH,
         gap: gap,
-        pitchX: rect.width + gap,
-        pitchY: rect.height + gap
+        pitchX: cellW + gap,
+        pitchY: cellH + gap
       };
     },
 
