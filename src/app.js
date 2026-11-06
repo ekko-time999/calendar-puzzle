@@ -43,10 +43,12 @@
   }
 
   // ---------- 日期选择 ----------
+  // 星期不开放选择，一律按年月日现算
+  function currentYear() { return new Date().getFullYear(); }
+
   function buildDateChips() {
     var monthGrid = $('monthGrid');
     var dayGrid = $('dayGrid');
-    var weekGrid = $('weekGrid');
 
     for (var m = 1; m <= 12; m++) {
       var mBtn = document.createElement('button');
@@ -64,47 +66,41 @@
       dBtn.textContent = String(d);
       dayGrid.appendChild(dBtn);
     }
-    for (var w = 0; w < 7; w++) {
-      var wBtn = document.createElement('button');
-      wBtn.type = 'button';
-      wBtn.className = 'chip';
-      wBtn.dataset.value = String(w);
-      wBtn.textContent = CP.WEEK_CELLS[w].label;
-      weekGrid.appendChild(wBtn);
-    }
 
     monthGrid.addEventListener('click', function (e) {
       var chip = e.target.closest('.chip');
       if (!chip) return;
       dateSel.m = Number(chip.dataset.value);
+      dateSel = CP.normalizeTarget(dateSel);
       updateDateUI();
     });
     dayGrid.addEventListener('click', function (e) {
       var chip = e.target.closest('.chip');
-      if (!chip) return;
+      if (!chip || chip.disabled) return;
       dateSel.d = Number(chip.dataset.value);
-      updateDateUI();
-    });
-    weekGrid.addEventListener('click', function (e) {
-      var chip = e.target.closest('.chip');
-      if (!chip) return;
-      dateSel.w = Number(chip.dataset.value);
+      dateSel = CP.normalizeTarget(dateSel);
       updateDateUI();
     });
   }
 
   function updateDateUI() {
-    var groups = [
-      { grid: $('monthGrid'), value: dateSel.m },
-      { grid: $('dayGrid'), value: dateSel.d },
-      { grid: $('weekGrid'), value: dateSel.w }
-    ];
-    groups.forEach(function (g) {
-      var chips = g.grid.querySelectorAll('.chip');
-      for (var i = 0; i < chips.length; i++) {
-        chips[i].classList.toggle('on', Number(chips[i].dataset.value) === g.value);
-      }
-    });
+    dateSel = CP.normalizeTarget(dateSel);
+    var maxDay = CP.daysInMonth(dateSel.m, currentYear());
+
+    var monthChips = $('monthGrid').querySelectorAll('.chip');
+    for (var i = 0; i < monthChips.length; i++) {
+      monthChips[i].classList.toggle('on', Number(monthChips[i].dataset.value) === dateSel.m);
+    }
+
+    var dayChips = $('dayGrid').querySelectorAll('.chip');
+    for (var j = 0; j < dayChips.length; j++) {
+      var v = Number(dayChips[j].dataset.value);
+      var disabled = v > maxDay;
+      dayChips[j].disabled = disabled;
+      dayChips[j].classList.toggle('disabled', disabled);
+      dayChips[j].classList.toggle('on', v === dateSel.d);
+    }
+
     $('datePreview').textContent = dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
     var warning = $('dateWarning');
     var hasProgress = game && (game.placements.length > 0 || game.answerMode);
@@ -112,13 +108,14 @@
   }
 
   function openDateModal() {
-    dateSel = { m: game.target.m, d: game.target.d, w: game.target.w };
+    dateSel = CP.normalizeTarget({ m: game.target.m, d: game.target.d }) || CP.todayTarget();
     updateDateUI();
     openModal($('dateModal'));
   }
 
   function applyDate() {
-    var target = { m: dateSel.m, d: dateSel.d, w: dateSel.w };
+    var target = CP.normalizeTarget({ m: dateSel.m, d: dateSel.d });
+    if (!target) return;
     var same = CP.isSameTarget(target, game.target) && !game.won && !game.answerMode;
     closeModal($('dateModal'));
     if (same) {
@@ -395,16 +392,14 @@
 
     $('btnApplyDate').addEventListener('click', applyDate);
     $('btnToday').addEventListener('click', function () {
-      var today = CP.todayTarget();
-      dateSel = { m: today.m, d: today.d, w: today.w };
+      dateSel = CP.normalizeTarget(CP.todayTarget());
       updateDateUI();
     });
     $('btnRandom').addEventListener('click', function () {
-      dateSel = {
-        m: Math.floor(Math.random() * 12) + 1,
-        d: Math.floor(Math.random() * 31) + 1,
-        w: Math.floor(Math.random() * 7)
-      };
+      var year = currentYear();
+      var m = Math.floor(Math.random() * 12) + 1;
+      var d = Math.floor(Math.random() * CP.daysInMonth(m, year)) + 1;
+      dateSel = CP.normalizeTarget({ m: m, d: d });
       updateDateUI();
     });
 

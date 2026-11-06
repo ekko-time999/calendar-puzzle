@@ -442,6 +442,68 @@ a.btn:focus-visible {
   position: absolute;
   display: block;
 }
+
+/* 固定标签层：月份 日期 星期始终完整显示，拼块盖上去也不隐藏 */
+.label-layer {
+  position: absolute;
+  left: var(--pad);
+  top: var(--pad);
+  width: calc(var(--cell) * 7 + var(--gap) * 6);
+  height: calc(var(--cell) * 8 + var(--gap) * 7);
+  display: grid;
+  grid-template-columns: repeat(7, var(--cell));
+  grid-auto-rows: var(--cell);
+  gap: var(--gap);
+  pointer-events: none;
+  z-index: 3;
+}
+
+.cell-label {
+  position: relative;
+  display: grid;
+  place-items: center;
+  border-radius: 7px;
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 1;
+  letter-spacing: 0.02em;
+  font-variant-numeric: tabular-nums;
+  color: rgba(255, 253, 248, 0.88);
+  text-shadow: 0 1px 2px rgba(20, 14, 8, 0.72), 0 0 3px rgba(20, 14, 8, 0.56);
+  opacity: 0.72;
+  transition: background-color 0.25s ease, box-shadow 0.25s ease, color 0.25s ease, opacity 0.25s ease;
+}
+.cell-label.week { font-size: 10px; letter-spacing: 0; }
+
+/* 今日不是当前目标时 今天的三格仍在拼块之上鲜明标出 */
+.cell-label.today-other {
+  opacity: 1;
+  color: #fff;
+  font-weight: 700;
+  background: color-mix(in srgb, var(--accent) 24%, transparent);
+  box-shadow:
+    inset 0 0 0 2px color-mix(in srgb, var(--accent) 82%, transparent),
+    0 0 16px color-mix(in srgb, var(--accent) 42%, transparent);
+}
+.cell-label.today-other::after {
+  content: '今';
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--accent) 72%, #000 4%);
+  color: #fff;
+  font-size: 7px;
+  font-weight: 700;
+  line-height: 1;
+  text-shadow: none;
+  animation: todayBreath 3.4s ease-in-out infinite;
+}
 .piece.enter { animation: pieceIn 0.36s var(--ease-out) backwards; }
 .piece.hint-piece {
   opacity: 0.42;
@@ -657,7 +719,6 @@ a.btn:focus-visible {
 .mini-cell {
   position: absolute;
   display: block;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
 }
 .tray-num {
   position: absolute;
@@ -973,8 +1034,6 @@ a.btn:focus-visible {
 .chips { display: grid; gap: 6px; }
 .month-chips { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 .day-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-.week-chips { grid-template-columns: repeat(7, minmax(0, 1fr)); }
-
 .chip {
   padding: 8px 0;
   border-radius: 9px;
@@ -995,6 +1054,13 @@ a.btn:focus-visible {
   transform: scale(1.02);
   box-shadow: 0 10px 20px -14px rgba(44, 39, 34, 0.7);
 }
+.chip:disabled,
+.chip.disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+}
+.chip:disabled:hover,
+.chip.disabled:hover { background: var(--surface-2); border-color: var(--line); transform: none; }
 
 .date-warning {
   margin: 4px 0 16px;
@@ -1340,6 +1406,9 @@ a.btn:focus-visible {
   .cell-sub { font-size: 7px; }
   .cell-main { font-size: clamp(12px, 3.4vw, 15px); }
   .cell.target.week .cell-main { font-size: clamp(14px, 4vw, 17px); }
+  .cell-label { font-size: 9.5px; border-radius: 6px; }
+  .cell-label.week { font-size: 8.5px; }
+  .cell-label.today-other::after { min-width: 10px; height: 10px; font-size: 6px; top: 1px; right: 1px; }
 
   .tray-card { padding: 8px 9px 6px; --mini: 11px; --mini-r: 3px; }
   .tray-head h2 { font-size: 13px; }
@@ -1405,6 +1474,9 @@ a.btn:focus-visible {
   .cell-sub { font-size: 7px; }
   .cell-main { font-size: 13px; }
   .cell.target.week .cell-main { font-size: 15px; }
+  .cell-label { font-size: 9px; border-radius: 5px; }
+  .cell-label.week { font-size: 8px; }
+  .cell-label.today-other::after { width: 8px; min-width: 0; height: 8px; padding: 0; font-size: 0; border-radius: 50%; top: 2px; right: 2px; }
   /* 横屏格子小 今日角标收成圆点 不挡数字 */
   .cell.target.today-cell::after {
     width: 4px;
@@ -1630,7 +1702,7 @@ a.btn:focus-visible {
       </div>
       <div class="date-preview">
         <strong id="datePreview">11月2日 星期一</strong>
-        <span>全部 2604 种组合都有解</span>
+        <span>星期按年月日自动计算</span>
       </div>
       <div class="date-section">
         <h3>月份</h3>
@@ -1639,10 +1711,6 @@ a.btn:focus-visible {
       <div class="date-section">
         <h3>日期</h3>
         <div id="dayGrid" class="chips day-chips"></div>
-      </div>
-      <div class="date-section">
-        <h3>星期</h3>
-        <div id="weekGrid" class="chips week-chips"></div>
       </div>
       <p class="date-warning" id="dateWarning">切换日期会开始新的一局 当前进度不保留</p>
       <div class="modal-actions">
@@ -1686,7 +1754,7 @@ a.btn:focus-visible {
 
       <section class="help-section">
         <h3>怎么玩</h3>
-        <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
+        <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格 星期按所选年月日自动算出 不用手动选择</p>
         <ul>
           <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
           <li>点旋转或翻转调整选中拼块的朝向 允许翻转</li>
@@ -1865,6 +1933,28 @@ a.btn:focus-visible {
 
   CP.todayTarget = function () {
     return CP.targetForDate(new Date());
+  };
+
+  // 某年某月共有多少天，闰年的 2 月会自动得到 29 天
+  CP.daysInMonth = function (m, y) {
+    return new Date(y || new Date().getFullYear(), m, 0).getDate();
+  };
+
+  // 星期完全由年月日算出，与 Date.getDay() 一致：0 = 周日
+  CP.weekdayOf = function (m, d, y) {
+    return new Date(y || new Date().getFullYear(), m - 1, d).getDay();
+  };
+
+  // 统一目标日期：收敛非法日期并自动补上星期，不依赖任何写死的对照表
+  CP.normalizeTarget = function (t, y) {
+    if (!t) return null;
+    var year = y || new Date().getFullYear();
+    var m = Math.round(Number(t.m));
+    var d = Math.round(Number(t.d));
+    if (!isFinite(m) || !isFinite(d)) return null;
+    m = Math.min(12, Math.max(1, m));
+    d = Math.min(CP.daysInMonth(m, year), Math.max(1, d));
+    return { m: m, d: d, w: CP.weekdayOf(m, d, year) };
   };
 
   CP.isSameTarget = function (a, b) {
@@ -2397,10 +2487,12 @@ a.btn:focus-visible {
     },
 
     isValidTarget: function (t) {
-      return !!t &&
-        Number.isInteger(t.m) && t.m >= 1 && t.m <= 12 &&
-        Number.isInteger(t.d) && t.d >= 1 && t.d <= 31 &&
-        Number.isInteger(t.w) && t.w >= 0 && t.w <= 6;
+      if (!t) return false;
+      var y = new Date().getFullYear();
+      var m = Number(t.m);
+      var d = Number(t.d);
+      return Number.isInteger(m) && m >= 1 && m <= 12 &&
+        Number.isInteger(d) && d >= 1 && d <= CP.daysInMonth(m, y);
     },
 
     isTodayChallenge: function () {
@@ -2413,9 +2505,15 @@ a.btn:focus-visible {
     // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
     checkDayRollover: function (notify) {
       var today = CP.todayTarget();
-      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) return false;
+      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) {
+        this.refreshTodayMarks();
+        return false;
+      }
       var oldDay = CP.dateFromKey(this.playDayKey);
-      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) return false;
+      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) {
+        this.refreshTodayMarks();
+        return false;
+      }
       this.startNew(today);
       if (notify !== false) this.toast('新的一天 已切换到 ' + today.m + '月' + today.d + '日');
       return true;
@@ -2445,6 +2543,12 @@ a.btn:focus-visible {
           this.startNew(today, { skipSave: true });
           return;
         }
+        // 旧存档的星期可能和日期对不上，按日期重算后重开，避免残留拼块错位
+        var norm = CP.normalizeTarget(cur.target);
+        if (norm && Number(cur.target.w) !== norm.w) {
+          this.startNew(norm, { skipSave: true });
+          return;
+        }
         this.restore(cur);
         return;
       }
@@ -2452,7 +2556,7 @@ a.btn:focus-visible {
     },
 
     restore: function (cur) {
-      this.target = { m: cur.target.m, d: cur.target.d, w: cur.target.w };
+      this.target = CP.normalizeTarget(cur.target) || CP.todayTarget();
       this.playDayKey = cur.playDay || CP.dateKey(new Date());
       this.rebuildBlocked();
 
@@ -2519,7 +2623,8 @@ a.btn:focus-visible {
 
     startNew: function (target, opts) {
       opts = opts || {};
-      this.target = { m: target.m, d: target.d, w: target.w };
+      var t = CP.normalizeTarget(target) || CP.todayTarget();
+      this.target = { m: t.m, d: t.d, w: t.w };
       this.playDayKey = CP.dateKey(new Date());
       this.placements = [];
       this.pieceStates = [];
@@ -2574,7 +2679,6 @@ a.btn:focus-visible {
           } else if (this.targetInfo[idx]) {
             var info = this.targetInfo[idx];
             el.classList.add('target', info.kind);
-            if (this.isTodayChallenge()) el.classList.add('today-cell');
             var sub = document.createElement('span');
             sub.className = 'cell-sub';
             sub.textContent = info.sub;
@@ -2601,6 +2705,68 @@ a.btn:focus-visible {
       this.piecesLayer = layer;
       this.pieceLayerEls = {};
       this.prevPieceSet = {};
+
+      // 固定标签层：月份 日期 星期始终显示，拼块盖上去也不隐藏
+      var labelLayer = document.createElement('div');
+      labelLayer.className = 'label-layer';
+      labelLayer.setAttribute('aria-hidden', 'true');
+      this.labelLayer = labelLayer;
+      this.labelEls = new Array(56);
+
+      var targets = this.targetCells() || [];
+      var targetSet = {};
+      for (var t = 0; t < targets.length; t++) targetSet[targets[t]] = 1;
+
+      for (var mi = 1; mi <= 12; mi++) {
+        var mc = CP.MONTH_CELLS[mi];
+        var midx = CP.idx(mc.r, mc.c);
+        if (!targetSet[midx]) this.addLabel(midx, 'month', mi + '月');
+      }
+      for (var di = 1; di <= 31; di++) {
+        var dc = CP.DAY_CELLS[di];
+        var didx = CP.idx(dc.r, dc.c);
+        if (!targetSet[didx]) this.addLabel(didx, 'day', String(di));
+      }
+      for (var wi = 0; wi < 7; wi++) {
+        var wc = CP.WEEK_CELLS[wi];
+        var widx = CP.idx(wc.r, wc.c);
+        if (!targetSet[widx]) this.addLabel(widx, 'week', '周' + wc.label);
+      }
+
+      this.board.appendChild(labelLayer);
+      this.refreshTodayMarks();
+    },
+
+    addLabel: function (idx, kind, text) {
+      var el = document.createElement('span');
+      el.className = 'cell-label ' + kind;
+      el.style.gridRow = String(CP.rowOf(idx) + 1);
+      el.style.gridColumn = String(CP.colOf(idx) + 1);
+      el.textContent = text;
+      this.labelEls[idx] = el;
+      if (this.labelLayer) this.labelLayer.appendChild(el);
+      return el;
+    },
+
+    // 今日三格始终鲜明：目标格用自身高亮块，非目标格在标签层加描边与「今」角标
+    refreshTodayMarks: function () {
+      var today = CP.todayTarget();
+      var todayCells = CP.targetCells(today.m, today.d, today.w) || [];
+      var todaySet = {};
+      for (var i = 0; i < todayCells.length; i++) todaySet[todayCells[i]] = 1;
+
+      var targets = this.targetCells() || [];
+      for (var j = 0; j < targets.length; j++) {
+        var cell = this.cellEls && this.cellEls[targets[j]];
+        if (cell) cell.classList.toggle('today-cell', !!todaySet[targets[j]]);
+      }
+
+      if (!this.labelEls) return;
+      for (var idx = 0; idx < 56; idx++) {
+        var label = this.labelEls[idx];
+        if (!label) continue;
+        label.classList.toggle('today-other', !!todaySet[idx]);
+      }
     },
 
     // 把一块拼图画成完整剪影：相邻格互相补缝，只在真正的轮廓上做圆角
@@ -2645,15 +2811,6 @@ a.btn:focus-visible {
           (!down && !left) ? 'var(--piece-r)' : '0'
         ].join(' ');
         sub.style.background = opts.color || def.color;
-
-        if (!opts.flat) {
-          var shadow = [];
-          if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
-          if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
-          if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
-          if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
-          if (shadow.length) sub.style.boxShadow = shadow.join(', ');
-        }
         layer.appendChild(sub);
       }
       return layer;
@@ -3308,12 +3465,6 @@ a.btn:focus-visible {
           (!down && !left) ? radius + 'px' : '0'
         ].join(' ');
         dot.style.backgroundColor = color;
-        var shadow = [];
-        if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
-        if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
-        if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
-        if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
-        if (shadow.length) dot.style.boxShadow = shadow.join(', ');
         this.ghost.appendChild(dot);
       }
       this.ghost.classList.add('show');
@@ -3708,10 +3859,12 @@ a.btn:focus-visible {
   }
 
   // ---------- 日期选择 ----------
+  // 星期不开放选择，一律按年月日现算
+  function currentYear() { return new Date().getFullYear(); }
+
   function buildDateChips() {
     var monthGrid = $('monthGrid');
     var dayGrid = $('dayGrid');
-    var weekGrid = $('weekGrid');
 
     for (var m = 1; m <= 12; m++) {
       var mBtn = document.createElement('button');
@@ -3729,47 +3882,41 @@ a.btn:focus-visible {
       dBtn.textContent = String(d);
       dayGrid.appendChild(dBtn);
     }
-    for (var w = 0; w < 7; w++) {
-      var wBtn = document.createElement('button');
-      wBtn.type = 'button';
-      wBtn.className = 'chip';
-      wBtn.dataset.value = String(w);
-      wBtn.textContent = CP.WEEK_CELLS[w].label;
-      weekGrid.appendChild(wBtn);
-    }
 
     monthGrid.addEventListener('click', function (e) {
       var chip = e.target.closest('.chip');
       if (!chip) return;
       dateSel.m = Number(chip.dataset.value);
+      dateSel = CP.normalizeTarget(dateSel);
       updateDateUI();
     });
     dayGrid.addEventListener('click', function (e) {
       var chip = e.target.closest('.chip');
-      if (!chip) return;
+      if (!chip || chip.disabled) return;
       dateSel.d = Number(chip.dataset.value);
-      updateDateUI();
-    });
-    weekGrid.addEventListener('click', function (e) {
-      var chip = e.target.closest('.chip');
-      if (!chip) return;
-      dateSel.w = Number(chip.dataset.value);
+      dateSel = CP.normalizeTarget(dateSel);
       updateDateUI();
     });
   }
 
   function updateDateUI() {
-    var groups = [
-      { grid: $('monthGrid'), value: dateSel.m },
-      { grid: $('dayGrid'), value: dateSel.d },
-      { grid: $('weekGrid'), value: dateSel.w }
-    ];
-    groups.forEach(function (g) {
-      var chips = g.grid.querySelectorAll('.chip');
-      for (var i = 0; i < chips.length; i++) {
-        chips[i].classList.toggle('on', Number(chips[i].dataset.value) === g.value);
-      }
-    });
+    dateSel = CP.normalizeTarget(dateSel);
+    var maxDay = CP.daysInMonth(dateSel.m, currentYear());
+
+    var monthChips = $('monthGrid').querySelectorAll('.chip');
+    for (var i = 0; i < monthChips.length; i++) {
+      monthChips[i].classList.toggle('on', Number(monthChips[i].dataset.value) === dateSel.m);
+    }
+
+    var dayChips = $('dayGrid').querySelectorAll('.chip');
+    for (var j = 0; j < dayChips.length; j++) {
+      var v = Number(dayChips[j].dataset.value);
+      var disabled = v > maxDay;
+      dayChips[j].disabled = disabled;
+      dayChips[j].classList.toggle('disabled', disabled);
+      dayChips[j].classList.toggle('on', v === dateSel.d);
+    }
+
     $('datePreview').textContent = dateSel.m + '月' + dateSel.d + '日 ' + weekName(dateSel.w);
     var warning = $('dateWarning');
     var hasProgress = game && (game.placements.length > 0 || game.answerMode);
@@ -3777,13 +3924,14 @@ a.btn:focus-visible {
   }
 
   function openDateModal() {
-    dateSel = { m: game.target.m, d: game.target.d, w: game.target.w };
+    dateSel = CP.normalizeTarget({ m: game.target.m, d: game.target.d }) || CP.todayTarget();
     updateDateUI();
     openModal($('dateModal'));
   }
 
   function applyDate() {
-    var target = { m: dateSel.m, d: dateSel.d, w: dateSel.w };
+    var target = CP.normalizeTarget({ m: dateSel.m, d: dateSel.d });
+    if (!target) return;
     var same = CP.isSameTarget(target, game.target) && !game.won && !game.answerMode;
     closeModal($('dateModal'));
     if (same) {
@@ -4060,16 +4208,14 @@ a.btn:focus-visible {
 
     $('btnApplyDate').addEventListener('click', applyDate);
     $('btnToday').addEventListener('click', function () {
-      var today = CP.todayTarget();
-      dateSel = { m: today.m, d: today.d, w: today.w };
+      dateSel = CP.normalizeTarget(CP.todayTarget());
       updateDateUI();
     });
     $('btnRandom').addEventListener('click', function () {
-      dateSel = {
-        m: Math.floor(Math.random() * 12) + 1,
-        d: Math.floor(Math.random() * 31) + 1,
-        w: Math.floor(Math.random() * 7)
-      };
+      var year = currentYear();
+      var m = Math.floor(Math.random() * 12) + 1;
+      var d = Math.floor(Math.random() * CP.daysInMonth(m, year)) + 1;
+      dateSel = CP.normalizeTarget({ m: m, d: d });
       updateDateUI();
     });
 

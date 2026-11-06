@@ -117,10 +117,12 @@
     },
 
     isValidTarget: function (t) {
-      return !!t &&
-        Number.isInteger(t.m) && t.m >= 1 && t.m <= 12 &&
-        Number.isInteger(t.d) && t.d >= 1 && t.d <= 31 &&
-        Number.isInteger(t.w) && t.w >= 0 && t.w <= 6;
+      if (!t) return false;
+      var y = new Date().getFullYear();
+      var m = Number(t.m);
+      var d = Number(t.d);
+      return Number.isInteger(m) && m >= 1 && m <= 12 &&
+        Number.isInteger(d) && d >= 1 && d <= CP.daysInMonth(m, y);
     },
 
     isTodayChallenge: function () {
@@ -133,9 +135,15 @@
     // 跨天时 若当前停在某一天的今日挑战 自动切换到新的今天
     checkDayRollover: function (notify) {
       var today = CP.todayTarget();
-      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) return false;
+      if (this.target.m === today.m && this.target.d === today.d && this.target.w === today.w) {
+        this.refreshTodayMarks();
+        return false;
+      }
       var oldDay = CP.dateFromKey(this.playDayKey);
-      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) return false;
+      if (!oldDay || !CP.isSameTarget(this.target, CP.targetForDate(oldDay))) {
+        this.refreshTodayMarks();
+        return false;
+      }
       this.startNew(today);
       if (notify !== false) this.toast('新的一天 已切换到 ' + today.m + '月' + today.d + '日');
       return true;
@@ -165,6 +173,12 @@
           this.startNew(today, { skipSave: true });
           return;
         }
+        // 旧存档的星期可能和日期对不上，按日期重算后重开，避免残留拼块错位
+        var norm = CP.normalizeTarget(cur.target);
+        if (norm && Number(cur.target.w) !== norm.w) {
+          this.startNew(norm, { skipSave: true });
+          return;
+        }
         this.restore(cur);
         return;
       }
@@ -172,7 +186,7 @@
     },
 
     restore: function (cur) {
-      this.target = { m: cur.target.m, d: cur.target.d, w: cur.target.w };
+      this.target = CP.normalizeTarget(cur.target) || CP.todayTarget();
       this.playDayKey = cur.playDay || CP.dateKey(new Date());
       this.rebuildBlocked();
 
@@ -239,7 +253,8 @@
 
     startNew: function (target, opts) {
       opts = opts || {};
-      this.target = { m: target.m, d: target.d, w: target.w };
+      var t = CP.normalizeTarget(target) || CP.todayTarget();
+      this.target = { m: t.m, d: t.d, w: t.w };
       this.playDayKey = CP.dateKey(new Date());
       this.placements = [];
       this.pieceStates = [];
@@ -294,7 +309,6 @@
           } else if (this.targetInfo[idx]) {
             var info = this.targetInfo[idx];
             el.classList.add('target', info.kind);
-            if (this.isTodayChallenge()) el.classList.add('today-cell');
             var sub = document.createElement('span');
             sub.className = 'cell-sub';
             sub.textContent = info.sub;
@@ -321,6 +335,68 @@
       this.piecesLayer = layer;
       this.pieceLayerEls = {};
       this.prevPieceSet = {};
+
+      // 固定标签层：月份 日期 星期始终显示，拼块盖上去也不隐藏
+      var labelLayer = document.createElement('div');
+      labelLayer.className = 'label-layer';
+      labelLayer.setAttribute('aria-hidden', 'true');
+      this.labelLayer = labelLayer;
+      this.labelEls = new Array(56);
+
+      var targets = this.targetCells() || [];
+      var targetSet = {};
+      for (var t = 0; t < targets.length; t++) targetSet[targets[t]] = 1;
+
+      for (var mi = 1; mi <= 12; mi++) {
+        var mc = CP.MONTH_CELLS[mi];
+        var midx = CP.idx(mc.r, mc.c);
+        if (!targetSet[midx]) this.addLabel(midx, 'month', mi + '月');
+      }
+      for (var di = 1; di <= 31; di++) {
+        var dc = CP.DAY_CELLS[di];
+        var didx = CP.idx(dc.r, dc.c);
+        if (!targetSet[didx]) this.addLabel(didx, 'day', String(di));
+      }
+      for (var wi = 0; wi < 7; wi++) {
+        var wc = CP.WEEK_CELLS[wi];
+        var widx = CP.idx(wc.r, wc.c);
+        if (!targetSet[widx]) this.addLabel(widx, 'week', '周' + wc.label);
+      }
+
+      this.board.appendChild(labelLayer);
+      this.refreshTodayMarks();
+    },
+
+    addLabel: function (idx, kind, text) {
+      var el = document.createElement('span');
+      el.className = 'cell-label ' + kind;
+      el.style.gridRow = String(CP.rowOf(idx) + 1);
+      el.style.gridColumn = String(CP.colOf(idx) + 1);
+      el.textContent = text;
+      this.labelEls[idx] = el;
+      if (this.labelLayer) this.labelLayer.appendChild(el);
+      return el;
+    },
+
+    // 今日三格始终鲜明：目标格用自身高亮块，非目标格在标签层加描边与「今」角标
+    refreshTodayMarks: function () {
+      var today = CP.todayTarget();
+      var todayCells = CP.targetCells(today.m, today.d, today.w) || [];
+      var todaySet = {};
+      for (var i = 0; i < todayCells.length; i++) todaySet[todayCells[i]] = 1;
+
+      var targets = this.targetCells() || [];
+      for (var j = 0; j < targets.length; j++) {
+        var cell = this.cellEls && this.cellEls[targets[j]];
+        if (cell) cell.classList.toggle('today-cell', !!todaySet[targets[j]]);
+      }
+
+      if (!this.labelEls) return;
+      for (var idx = 0; idx < 56; idx++) {
+        var label = this.labelEls[idx];
+        if (!label) continue;
+        label.classList.toggle('today-other', !!todaySet[idx]);
+      }
     },
 
     // 把一块拼图画成完整剪影：相邻格互相补缝，只在真正的轮廓上做圆角
@@ -365,15 +441,6 @@
           (!down && !left) ? 'var(--piece-r)' : '0'
         ].join(' ');
         sub.style.background = opts.color || def.color;
-
-        if (!opts.flat) {
-          var shadow = [];
-          if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
-          if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
-          if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
-          if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
-          if (shadow.length) sub.style.boxShadow = shadow.join(', ');
-        }
         layer.appendChild(sub);
       }
       return layer;
@@ -1028,12 +1095,6 @@
           (!down && !left) ? radius + 'px' : '0'
         ].join(' ');
         dot.style.backgroundColor = color;
-        var shadow = [];
-        if (!up) shadow.push('inset 0 1px 0 rgba(255,255,255,.34)');
-        if (!left) shadow.push('inset 1px 0 0 rgba(255,255,255,.16)');
-        if (!down) shadow.push('inset 0 -2px 0 rgba(0,0,0,.12)');
-        if (!right) shadow.push('inset -1px 0 0 rgba(0,0,0,.06)');
-        if (shadow.length) dot.style.boxShadow = shadow.join(', ');
         this.ghost.appendChild(dot);
       }
       this.ghost.classList.add('show');
