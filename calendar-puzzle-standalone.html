@@ -36,12 +36,17 @@
   --good: #0f766e;
   --shadow: 0 26px 50px -30px rgba(73, 55, 38, 0.55);
   --shadow-soft: 0 14px 30px -22px rgba(73, 55, 38, 0.55);
-  --radius: 18px;
+  --radius: 20px;
+  --radius-sm: 10px;
+  --radius-md: 14px;
+  --radius-lg: 22px;
   --mini: 15px;
   --mini-r: 4px;
   --piece-r: 10px;
   --ease: cubic-bezier(0.22, 0.9, 0.24, 1);
   --ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-press: cubic-bezier(0.3, 0.7, 0.35, 1);
+  --ring: 0 0 0 3px color-mix(in srgb, var(--accent) 18%, transparent);
   color-scheme: light dark;
 }
 
@@ -113,6 +118,15 @@ body.modal-open { overflow: hidden; }
 button {
   font-family: inherit;
   color: inherit;
+}
+
+button:focus-visible,
+.btn:focus-visible,
+.chip:focus-visible,
+.tray-piece:focus-visible,
+a.btn:focus-visible {
+  outline: 2px solid color-mix(in srgb, var(--accent) 58%, transparent);
+  outline-offset: 2px;
 }
 
 [hidden] { display: none !important; }
@@ -187,7 +201,7 @@ button {
 .brand:hover .brand-mark i:nth-child(4) { transform: translate(2px, 2px); }
 
 .brand-text { display: flex; flex-direction: column; line-height: 1.15; }
-.brand-text b { font-size: 17px; letter-spacing: 0.02em; }
+.brand-text b { font-size: 17px; font-weight: 650; letter-spacing: 0.015em; }
 .brand-text small { font-size: 10px; color: var(--muted); letter-spacing: 0.08em; margin-top: 3px; }
 
 .top-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
@@ -212,7 +226,7 @@ button {
     color 0.2s ease;
 }
 .btn:hover { background: var(--surface-2); border-color: var(--line-strong); transform: translateY(-1px) scale(1.03); }
-.btn:active { transform: scale(0.96); box-shadow: none; }
+.btn:active { transform: scale(0.955); box-shadow: none; transition-duration: 0.12s; }
 .btn.subtle { background: var(--surface-translucent); backdrop-filter: blur(10px); }
 .btn.primary { background: var(--ink); border-color: var(--ink); color: var(--surface); }
 .btn.primary:hover { background: var(--ink-2); border-color: var(--ink-2); }
@@ -260,10 +274,11 @@ button {
 .panel {
   background: var(--surface);
   background: linear-gradient(168deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--surface-2)));
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
   border-radius: var(--radius);
   box-shadow:
-    0 1px 0 rgba(255, 255, 255, 0.6) inset,
+    0 1px 0 color-mix(in srgb, #fff 55%, transparent) inset,
+    0 1px 2px rgba(60, 45, 30, 0.04),
     var(--shadow-soft);
 }
 
@@ -274,6 +289,9 @@ button {
   align-items: center;
   justify-content: space-between;
   gap: 20px;
+  background:
+    radial-gradient(120% 160% at 0% 0%, color-mix(in srgb, var(--accent-soft) 34%, transparent), transparent 58%),
+    linear-gradient(168deg, var(--surface), color-mix(in srgb, var(--surface) 82%, var(--surface-2)));
   animation: riseIn 0.7s 0.06s var(--ease-out) both;
 }
 
@@ -284,6 +302,7 @@ button {
 .back-today {
   display: inline-flex;
   align-items: center;
+  gap: 5px;
   padding: 4px 10px;
   border: 1px solid var(--line);
   border-radius: 999px;
@@ -295,6 +314,7 @@ button {
   cursor: pointer;
   transition: color 0.2s ease, border-color 0.2s ease, transform 0.22s var(--ease);
 }
+.back-today .ico { width: 12px; height: 12px; }
 .back-today:hover { color: var(--accent-ink); border-color: var(--accent-soft); }
 .back-today:active { transform: scale(0.95); }
 
@@ -314,24 +334,38 @@ button {
 .challenge-tag.free { background: var(--indigo-soft); color: var(--indigo); }
 .challenge-tag.done { background: var(--teal-soft); color: var(--good); }
 .challenge-tag.pop { animation: tagPop 0.45s var(--ease); }
+/* 今日挑战 小圆点轻呼吸 非今日状态保持静止 */
+.challenge-tag::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: currentColor;
+  opacity: 0.5;
+  animation: tagDot 2.6s ease-in-out infinite;
+}
+.challenge-tag.free::before,
+.challenge-tag.done::before { animation: none; opacity: 0.42; }
 
 .challenge h1 {
   margin: 8px 0 3px;
   font-size: clamp(20px, 3.2vw, 27px);
-  letter-spacing: 0.01em;
+  font-weight: 650;
+  letter-spacing: -0.012em;
   line-height: 1.15;
 }
 .challenge h1.swap { animation: titleSwap 0.5s var(--ease-out); }
 
-.challenge-sub { margin: 0; font-size: 12px; color: var(--muted); }
+.challenge-sub { margin: 0; font-size: 12.5px; letter-spacing: 0.01em; color: var(--muted); }
 
 .metrics { display: flex; gap: 8px; flex: 0 0 auto; }
 .metric {
   min-width: 66px;
   padding: 8px 11px 7px;
   border-radius: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  background: linear-gradient(165deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 88%, var(--bg)));
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 38%, transparent) inset;
   text-align: center;
   transition: transform 0.25s var(--ease), border-color 0.25s ease;
 }
@@ -341,6 +375,7 @@ button {
   margin-top: 2px;
   font-size: 18px;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
   line-height: 1.1;
 }
 .metric strong.bump { animation: metricBump 0.42s var(--ease); }
@@ -378,8 +413,10 @@ button {
     radial-gradient(120% 90% at 50% -20%, rgba(255, 255, 255, 0.1), transparent 60%),
     linear-gradient(160deg, var(--frame), var(--frame-2));
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.14),
-    0 24px 40px -24px rgba(30, 22, 14, 0.8);
+    inset 0 1px 0 rgba(255, 255, 255, 0.16),
+    inset 0 0 0 1px rgba(255, 255, 255, 0.045),
+    0 26px 44px -26px rgba(30, 22, 14, 0.82),
+    0 2px 6px rgba(30, 22, 14, 0.16);
   touch-action: none;
   user-select: none;
   margin: 0 auto;
@@ -419,10 +456,12 @@ button {
   position: relative;
   border-radius: 7px;
   background: var(--cell-empty);
-  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s var(--ease);
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, transform 0.16s var(--ease-press);
   animation: cellIn 0.5s var(--ease-out) backwards;
   animation-delay: calc(var(--i, 0) * 9ms + 120ms);
 }
+
+.board:not(.locked) .cell.empty:active { transform: scale(0.93); }
 
 .cell.empty {
   background: linear-gradient(150deg, var(--cell-empty), var(--cell-empty-2));
@@ -450,22 +489,41 @@ button {
   align-items: flex-start;
   padding: 3px 4px 4px;
   border: 1px solid rgba(0, 0, 0, 0.06);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.45);
 }
-.cell.target.month { background: #ffe6d8; color: #8a3416; }
-.cell.target.day { background: #ddf3ee; color: #0f5f55; }
-.cell.target.week { background: #e7e5fd; color: #3730a3; }
+.cell.target.month { background: linear-gradient(156deg, #fff0e6, #ffe2d2); color: #8a3416; }
+.cell.target.day { background: linear-gradient(156deg, #e9f8f4, #d7efe9); color: #0f5f55; }
+.cell.target.week { background: linear-gradient(156deg, #efedfe, #e2e0fc); color: #3730a3; }
 
 .cell.target { position: relative; }
+/* 今日目标格角标 用轻呼吸提示 不干扰数字 */
 .cell.target.today-cell::after {
   content: '今';
   position: absolute;
   top: 2px;
-  right: 3px;
-  font-size: 8px;
+  right: 2px;
+  min-width: 12px;
+  height: 12px;
+  padding: 0 2px;
+  display: grid;
+  place-items: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, currentColor 12%, transparent);
+  box-shadow: inset 0 0 0 1px color-mix(in srgb, currentColor 10%, transparent);
+  font-size: 7px;
   font-weight: 700;
   line-height: 1;
-  opacity: 0.62;
   letter-spacing: 0;
+  opacity: 0.86;
+  animation: todayBreath 3.4s ease-in-out infinite;
+}
+
+/* 深色模式下日期格配色 避免浅底刺眼 */
+@media (prefers-color-scheme: dark) {
+  .cell.target { border-color: rgba(255, 255, 255, 0.06); box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.07); }
+  .cell.target.month { background: linear-gradient(156deg, #3a2418, #2e1c12); color: #ffb39c; }
+  .cell.target.day { background: linear-gradient(156deg, #17302b, #132724); color: #7ee0cf; }
+  .cell.target.week { background: linear-gradient(156deg, #242144, #1c1a36); color: #b3aefc; }
 }
 
 .cell-sub {
@@ -555,7 +613,8 @@ button {
   padding: 7px;
   border: 1px dashed transparent;
   border-radius: 13px;
-  background: var(--surface-2);
+  background: linear-gradient(180deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 88%, var(--bg)));
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 42%, transparent) inset;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -575,21 +634,26 @@ button {
   border-color: var(--line-strong);
   transform: translateY(-2px) scale(1.02);
 }
-.tray-piece:active { cursor: grabbing; transform: scale(0.97); }
+.tray-piece:active { cursor: grabbing; transform: scale(0.96); }
 .tray-piece.selected {
   background: var(--surface);
   border-color: var(--accent);
-  box-shadow: 0 0 0 3px rgba(231, 111, 81, 0.16), 0 10px 22px -16px rgba(231, 111, 81, 0.65);
+  box-shadow: 0 0 0 3px rgba(231, 111, 81, 0.14), 0 12px 24px -18px rgba(231, 111, 81, 0.7);
   transform: translateY(-2px);
 }
-.tray-piece.placed { opacity: 0.38; cursor: pointer; }
-.tray-piece.placed .mini { filter: saturate(0.45); }
+.tray-piece.placed { opacity: 0.34; cursor: pointer; }
+.tray-piece.placed .mini { filter: saturate(0.4); }
 .tray-piece.hinting { animation: hintPiece 1.6s ease-in-out infinite; }
 
 .mini {
   position: relative;
   display: block;
+  transition: transform 0.3s var(--ease);
 }
+.tray-piece.selected .mini { transform: translateY(-1px) scale(1.03); }
+/* 旋转 翻转后在托盘里做一次形变衔接 */
+.mini.turn { animation: miniTurn 0.34s var(--ease-out); }
+.mini.flipx { animation: miniFlip 0.34s var(--ease-out); }
 .mini-cell {
   position: absolute;
   display: block;
@@ -628,11 +692,14 @@ button {
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   border-radius: 16px;
-  background: var(--surface-translucent);
-  backdrop-filter: blur(18px);
-  box-shadow: var(--shadow);
+  background: color-mix(in srgb, var(--surface) 82%, transparent);
+  backdrop-filter: blur(20px) saturate(1.15);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 45%, transparent) inset,
+    var(--shadow);
 }
 
 .dock-group { display: flex; gap: 6px; }
@@ -737,10 +804,14 @@ button {
   align-items: center;
   gap: 9px;
   padding: 8px 9px 8px 11px;
-  border: 1px solid var(--line);
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
   border-radius: 15px;
-  background: var(--surface);
-  box-shadow: 0 20px 36px -22px rgba(30, 22, 14, 0.6);
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  backdrop-filter: blur(14px) saturate(1.1);
+  -webkit-backdrop-filter: blur(14px) saturate(1.1);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 45%, transparent) inset,
+    0 20px 36px -22px rgba(30, 22, 14, 0.6);
   opacity: 0;
   pointer-events: none;
   transform: translate(-50%, 18px) scale(0.96);
@@ -801,10 +872,14 @@ button {
   max-width: min(90vw, 520px);
   padding: 10px 17px;
   border-radius: 999px;
-  background: var(--ink);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  background: color-mix(in srgb, var(--ink) 94%, transparent);
   color: var(--surface);
   font-size: 12.5px;
+  letter-spacing: 0.01em;
   text-align: center;
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
   box-shadow: 0 16px 30px -18px rgba(0, 0, 0, 0.7);
   transition: opacity 0.24s ease, transform 0.3s var(--ease-out);
 }
@@ -819,11 +894,12 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  background: rgba(28, 22, 16, 0.52);
-  backdrop-filter: blur(8px);
+  background: color-mix(in srgb, var(--frame) 52%, transparent);
+  backdrop-filter: blur(10px) saturate(1.05);
+  -webkit-backdrop-filter: blur(10px) saturate(1.05);
   opacity: 0;
   visibility: hidden;
-  transition: opacity 0.26s ease, visibility 0.26s ease;
+  transition: opacity 0.3s ease, visibility 0.34s ease;
 }
 .modal.open { opacity: 1; visibility: visible; }
 
@@ -833,13 +909,15 @@ button {
   max-height: calc(100vh - 36px);
   overflow: auto;
   padding: 22px 24px 24px;
-  border-radius: 22px;
+  border-radius: 24px;
   background: var(--surface);
   background: linear-gradient(168deg, var(--surface), color-mix(in srgb, var(--surface) 86%, var(--surface-2)));
-  border: 1px solid var(--line);
-  box-shadow: 0 34px 70px -30px rgba(20, 14, 8, 0.65);
+  border: 1px solid color-mix(in srgb, var(--line) 88%, transparent);
+  box-shadow:
+    0 1px 0 color-mix(in srgb, #fff 50%, transparent) inset,
+    0 34px 70px -30px rgba(20, 14, 8, 0.62);
   opacity: 0;
-  transform: translateY(18px) scale(0.96);
+  transform: translateY(22px) scale(0.965);
   transition: transform 0.34s var(--ease-out), opacity 0.26s ease;
   -webkit-overflow-scrolling: touch;
 }
@@ -882,8 +960,9 @@ button {
   padding: 12px 14px;
   margin-bottom: 16px;
   border-radius: 12px;
-  background: var(--surface-2);
-  border: 1px solid var(--line);
+  background: linear-gradient(160deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 86%, var(--bg)));
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 40%, transparent) inset;
 }
 .date-preview strong { font-size: 16px; }
 .date-preview span { font-size: 10.5px; color: var(--muted); }
@@ -907,13 +986,14 @@ button {
   transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, transform 0.2s var(--ease);
 }
 .chip:hover { background: var(--surface); border-color: var(--line-strong); transform: translateY(-1px) scale(1.05); }
-.chip:active { transform: scale(0.95); }
+.chip:active { transform: scale(0.93); transition-duration: 0.12s; }
 .chip.on {
   background: var(--ink);
   border-color: var(--ink);
   color: var(--surface);
   font-weight: 600;
   transform: scale(1.02);
+  box-shadow: 0 10px 20px -14px rgba(44, 39, 34, 0.7);
 }
 
 .date-warning {
@@ -945,8 +1025,9 @@ button {
 .stat-card {
   padding: 12px 14px;
   border-radius: 13px;
-  border: 1px solid var(--line);
-  background: var(--surface-2);
+  border: 1px solid color-mix(in srgb, var(--line) 90%, transparent);
+  background: linear-gradient(160deg, var(--surface-2), color-mix(in srgb, var(--surface-2) 86%, var(--bg)));
+  box-shadow: 0 1px 0 color-mix(in srgb, #fff 38%, transparent) inset;
   animation: riseIn 0.45s var(--ease-out) backwards;
   animation-delay: calc(60ms + var(--i, 0) * 55ms);
 }
@@ -1105,8 +1186,9 @@ button {
   to { opacity: 1; transform: none; }
 }
 @keyframes pieceIn {
-  from { opacity: 0.35; transform: translateY(5px) scale(0.96); }
-  to { opacity: 1; transform: none; }
+  0% { opacity: 0; transform: translateY(7px) scale(0.94); }
+  68% { opacity: 1; transform: translateY(0) scale(1.02); }
+  100% { opacity: 1; transform: none; }
 }
 @keyframes pieceReveal {
   0% { opacity: 0; transform: translateY(7px) scale(0.9); }
@@ -1128,6 +1210,22 @@ button {
 @keyframes tagPop {
   0%, 100% { transform: scale(1); }
   45% { transform: scale(1.12); }
+}
+@keyframes tagDot {
+  0%, 100% { opacity: 0.3; transform: scale(0.85); }
+  50% { opacity: 0.8; transform: scale(1.15); }
+}
+@keyframes todayBreath {
+  0%, 100% { opacity: 0.68; transform: scale(1); }
+  50% { opacity: 0.95; transform: scale(1.04); }
+}
+@keyframes miniTurn {
+  from { transform: rotate(-90deg); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
+}
+@keyframes miniFlip {
+  from { transform: scaleX(-1); opacity: 0.55; }
+  to { transform: none; opacity: 1; }
 }
 @keyframes metricBump {
   0% { transform: scale(1); }
@@ -1157,6 +1255,30 @@ button {
 @keyframes confettiFall {
   0% { transform: translateY(0) rotate(0deg); opacity: 1; }
   100% { transform: translateY(360px) rotate(540deg); opacity: 0; }
+}
+
+/* 触摸设备不保留 hover 抬起 避免点完还悬着 */
+@media (hover: none) {
+  .btn:hover,
+  .dock-btn:hover:not(:disabled),
+  .tray-piece:hover,
+  .chip:hover,
+  .mini-btn:hover,
+  .modal-close:hover,
+  .install-tip-close:hover,
+  .brand:hover .brand-mark,
+  .board:not(.locked) .cell.empty:hover { transform: none; }
+  .brand:hover .brand-mark i:nth-child(1),
+  .brand:hover .brand-mark i:nth-child(4) { transform: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ---------- 响应式 ---------- */
@@ -1283,6 +1405,20 @@ button {
   .cell-sub { font-size: 7px; }
   .cell-main { font-size: 13px; }
   .cell.target.week .cell-main { font-size: 15px; }
+  /* 横屏格子小 今日角标收成圆点 不挡数字 */
+  .cell.target.today-cell::after {
+    width: 4px;
+    height: 4px;
+    min-width: 0;
+    padding: 0;
+    top: 3px;
+    right: 3px;
+    font-size: 0;
+    border-radius: 50%;
+    background: currentColor;
+    box-shadow: none;
+    opacity: 0.55;
+  }
 
   .tray-card { padding: 8px 9px 7px; --mini: 10px; --mini-r: 3px; }
   .tray-head h2 { font-size: 12px; }
@@ -1334,6 +1470,18 @@ button {
   outline-offset: 2px;
 }
 
+/* 旋转翻转簇深色配色 放在最后覆盖浅色规则 */
+@media (prefers-color-scheme: dark) {
+  .dock-group.dock-transform {
+    border-color: #3d3225;
+    background: linear-gradient(180deg, #2a251d 0%, #241f18 100%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06), 0 8px 16px -14px rgba(0, 0, 0, 0.7);
+  }
+  .dock-transform .dock-btn:hover { background: #332c22; border-color: #4a3f2f; }
+  #btnRotate .ico { color: #f3ad63; }
+  #btnFlip .ico { color: #5fd6c4; }
+}
+
 </style>
 </head>
 <body>
@@ -1383,7 +1531,9 @@ button {
         <div class="challenge-left">
           <div class="challenge-head">
             <span id="challengeTag" class="challenge-tag">今日挑战</span>
-            <button id="btnBackToday" class="back-today" type="button" hidden>回到今天</button>
+            <button id="btnBackToday" class="back-today" type="button" hidden>
+              <svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg>回到今天
+            </button>
           </div>
           <h1 id="challengeTitle">11月2日 星期一</h1>
           <p class="challenge-sub">铺满棋盘 只留下月日星期三个格子</p>
@@ -1411,10 +1561,10 @@ button {
       <aside class="tray-card panel">
         <div class="tray-head">
           <h2>拼块</h2>
-          <span>点选后点棋盘 或直接拖动</span>
+          <span>点选后点棋盘 也可直接拖动</span>
         </div>
         <div id="tray" class="tray" aria-label="拼块列表"></div>
-        <p class="tray-foot">旋转翻面作用于选中的拼块</p>
+        <p class="tray-foot">旋转 翻转作用于选中的拼块</p>
       </aside>
     </main>
 
@@ -1536,10 +1686,10 @@ button {
 
       <section class="help-section">
         <h3>怎么玩</h3>
-        <p>棋盘是 7 列 × 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
+        <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
         <ul>
           <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
-          <li>点旋转或翻面调整选中拼块的朝向 允许翻面</li>
+          <li>点旋转或翻转调整选中拼块的朝向 允许翻转</li>
           <li>点棋盘上已放置的拼块可以取下 点拼块托盘里的已用拼块也可以取下</li>
           <li>提示会在当前摆法的基础上给出下一块的位置 看答案会展示一种完整解法 本局不计入连胜</li>
         </ul>
@@ -1553,7 +1703,7 @@ button {
           <li>找不到入口 直接下载安装包 装好后桌面有图标 断网也能玩</li>
         </ol>
         <a class="btn primary help-download" href="download/calendar-puzzle.apk" download>下载 Android 安装包 APK</a>
-        <p class="help-note">安装包约 1 MB 首次安装需允许未知来源应用 装好后不依赖浏览器与网络</p>
+        <p class="help-note">安装包约 65 KB 首次安装需允许未知来源应用 装好后不依赖浏览器与网络</p>
       </section>
 
       <section class="help-section">
@@ -1569,7 +1719,7 @@ button {
 
       <section class="help-section">
         <h3>说明</h3>
-        <p>标准 10 块星期版共有 12 × 31 × 7 = 2604 种日期组合 已逐一验证全部有解 进度 成绩与统计只保存在本机浏览器里</p>
+        <p>标准 10 块星期版有 2604 种日期组合 全部有解 进度与统计只保存在本机浏览器</p>
       </section>
     </div>
   </div>
@@ -2992,7 +3142,7 @@ button {
       if (seen) return;
       try { window.localStorage.setItem('cp-transform-hint', '1'); } catch (e) { /* 忽略 */ }
       group.classList.add('hint');
-      this.toast('点 旋转 转方向 点 翻转 变镜像');
+      this.toast('旋转调方向 翻转成镜像');
       setTimeout(function () { group.classList.remove('hint'); }, 1900);
     },
 
@@ -3000,6 +3150,7 @@ button {
       if (this.won || this.answerMode || this.selected === null) return;
       this.pieceStates[this.selected].rot = (this.pieceStates[this.selected].rot + 1) % 4;
       this.renderTray();
+      this.pulseTrayMini(this.selected, 'turn');
       this.save();
     },
 
@@ -3007,7 +3158,20 @@ button {
       if (this.won || this.answerMode || this.selected === null) return;
       this.pieceStates[this.selected].flip = this.pieceStates[this.selected].flip ? 0 : 1;
       this.renderTray();
+      this.pulseTrayMini(this.selected, 'flipx');
       this.save();
+    },
+
+    // 托盘里的小图做一次形变衔接 让旋转 翻转的结果可感知
+    pulseTrayMini: function (piece, kind) {
+      var btn = this.pieceEls && this.pieceEls[piece];
+      if (!btn) return;
+      var mini = btn.querySelector('.mini');
+      if (!mini) return;
+      mini.classList.remove('turn', 'flipx');
+      void mini.offsetWidth;
+      mini.classList.add(kind);
+      setTimeout(function () { mini.classList.remove(kind); }, 420);
     },
 
     // ---------- 拖拽 ----------

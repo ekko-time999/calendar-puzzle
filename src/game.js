@@ -862,7 +862,7 @@
       if (seen) return;
       try { window.localStorage.setItem('cp-transform-hint', '1'); } catch (e) { /* 忽略 */ }
       group.classList.add('hint');
-      this.toast('点 旋转 转方向 点 翻转 变镜像');
+      this.toast('旋转调方向 翻转成镜像');
       setTimeout(function () { group.classList.remove('hint'); }, 1900);
     },
 
@@ -870,6 +870,7 @@
       if (this.won || this.answerMode || this.selected === null) return;
       this.pieceStates[this.selected].rot = (this.pieceStates[this.selected].rot + 1) % 4;
       this.renderTray();
+      this.pulseTrayMini(this.selected, 'turn');
       this.save();
     },
 
@@ -877,7 +878,20 @@
       if (this.won || this.answerMode || this.selected === null) return;
       this.pieceStates[this.selected].flip = this.pieceStates[this.selected].flip ? 0 : 1;
       this.renderTray();
+      this.pulseTrayMini(this.selected, 'flipx');
       this.save();
+    },
+
+    // 托盘里的小图做一次形变衔接 让旋转 翻转的结果可感知
+    pulseTrayMini: function (piece, kind) {
+      var btn = this.pieceEls && this.pieceEls[piece];
+      if (!btn) return;
+      var mini = btn.querySelector('.mini');
+      if (!mini) return;
+      mini.classList.remove('turn', 'flipx');
+      void mini.offsetWidth;
+      mini.classList.add(kind);
+      setTimeout(function () { mini.classList.remove(kind); }, 420);
     },
 
     // ---------- 拖拽 ----------

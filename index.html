@@ -58,7 +58,9 @@
         <div class="challenge-left">
           <div class="challenge-head">
             <span id="challengeTag" class="challenge-tag">今日挑战</span>
-            <button id="btnBackToday" class="back-today" type="button" hidden>回到今天</button>
+            <button id="btnBackToday" class="back-today" type="button" hidden>
+              <svg class="ico" aria-hidden="true"><use href="#i-calendar"/></svg>回到今天
+            </button>
           </div>
           <h1 id="challengeTitle">11月2日 星期一</h1>
           <p class="challenge-sub">铺满棋盘 只留下月日星期三个格子</p>
@@ -86,10 +88,10 @@
       <aside class="tray-card panel">
         <div class="tray-head">
           <h2>拼块</h2>
-          <span>点选后点棋盘 或直接拖动</span>
+          <span>点选后点棋盘 也可直接拖动</span>
         </div>
         <div id="tray" class="tray" aria-label="拼块列表"></div>
-        <p class="tray-foot">旋转翻面作用于选中的拼块</p>
+        <p class="tray-foot">旋转 翻转作用于选中的拼块</p>
       </aside>
     </main>
 
@@ -211,10 +213,10 @@
 
       <section class="help-section">
         <h3>怎么玩</h3>
-        <p>棋盘是 7 列 × 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
+        <p>棋盘 7 列 8 行 共 56 格 深色墙格与三个日期格不能覆盖 把 10 块拼图全部放进棋盘 恰好留出月 日 星期三格</p>
         <ul>
           <li>点一下拼块选中 再点棋盘放置 也可以直接拖动拼块到棋盘</li>
-          <li>点旋转或翻面调整选中拼块的朝向 允许翻面</li>
+          <li>点旋转或翻转调整选中拼块的朝向 允许翻转</li>
           <li>点棋盘上已放置的拼块可以取下 点拼块托盘里的已用拼块也可以取下</li>
           <li>提示会在当前摆法的基础上给出下一块的位置 看答案会展示一种完整解法 本局不计入连胜</li>
         </ul>
@@ -228,7 +230,7 @@
           <li>找不到入口 直接下载安装包 装好后桌面有图标 断网也能玩</li>
         </ol>
         <a class="btn primary help-download" href="download/calendar-puzzle.apk" download>下载 Android 安装包 APK</a>
-        <p class="help-note">安装包约 1 MB 首次安装需允许未知来源应用 装好后不依赖浏览器与网络</p>
+        <p class="help-note">安装包约 65 KB 首次安装需允许未知来源应用 装好后不依赖浏览器与网络</p>
       </section>
 
       <section class="help-section">
@@ -244,7 +246,7 @@
 
       <section class="help-section">
         <h3>说明</h3>
-        <p>标准 10 块星期版共有 12 × 31 × 7 = 2604 种日期组合 已逐一验证全部有解 进度 成绩与统计只保存在本机浏览器里</p>
+        <p>标准 10 块星期版有 2604 种日期组合 全部有解 进度与统计只保存在本机浏览器</p>
       </section>
     </div>
   </div>
